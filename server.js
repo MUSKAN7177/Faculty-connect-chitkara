@@ -7,8 +7,8 @@ app.use(cors());
 app.use(express.json());
 
 // 🔗 Database Connection
-mongoose.connect("mongodb://127.0.0.1:27017/facultyUltra")
-    .then(() => console.log("✅ MongoDB Connected (facultyUltra)"))
+mongoose.connect("mongodb+srv://muskan: muskan78140@cluster0.xxxxx.mongodb .net/facultyDB?retryWrites=true&w= majority"))
+    .then(() => console.log("✅ MongoDB Altas"))
     .catch(err => console.log("❌ DB Connection Error:", err));
 
 // 📝 SCHEMAS
