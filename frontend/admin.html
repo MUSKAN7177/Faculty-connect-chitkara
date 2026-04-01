@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<h2>Add Teacher</h2>
+
+<input id="name" placeholder="Name">
+<input id="password" placeholder="Password">
+
+<select id="dept">
+  <option>CSE</option>
+  <option>BCA</option>
+</select>
+
+<button onclick="add()">Add Teacher</button>
+
+<script>
+async function add(){
+  await fetch(" https://chitkara-faculty-app-2026.onrender.com/api/add-teacher",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      name:name.value,
+      password:password.value,
+      role:"teacher",
+      department:dept.value,
+      image:"images/teacher.jpg",
+      timetable:[]
+    })
+  });
+
+  alert("Teacher Added");
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Select Role | Faculty Connect</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" style="width: 220px; margin-bottom: 20px;">
+        
+        <h2>Welcome to Portal</h2>
+        <p>Please select your identity to continue</p>
+        
+        <div class="role-box">
+            <button onclick="setRole('student')">👨‍🎓 I am a Student</button>
+            <button onclick="setRole('teacher')" style="margin-top: 15px; background: #5a0000;">👨‍🏫 I am a Faculty</button>
+        </div>
+    </div>
+
+    <script>
+        function setRole(role) {
+            localStorage.setItem("role", role); // Role save ho jayega
+            window.location.href = "login.html"; // Ab seedha login par jayenge
+        }
+    </script>
+</body>
+</html>

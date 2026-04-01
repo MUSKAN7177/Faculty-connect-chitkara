@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h2>Dashboard</h2>
+  <button onclick="loadTeachers()">Teachers</button>
+  <button onclick="loadRequests()">Requests</button>
+</div>
+
+<div class="main">
+  <div id="data"></div>
+</div>
+
+<script>
+const role = localStorage.getItem("role");
+const userId = localStorage.getItem("id");
+
+async function loadTeachers(){
+  const dept = localStorage.getItem("dept");
+
+const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/teachers/${dept}");
+  const teachers = await res.json();
+
+  let html = "";
+
+  teachers.forEach(t=>{
+    html += `
+    <div class="card">
+      <img src="${t.image}">
+      <h3>${t.name}</h3>
+
+      <span class="${t.timetable.length?'green':'red'}">
+        ${t.timetable.length?'Available':'Busy'}
+      </span><br>
+
+      ${role==="student" ? `<button onclick="sendReq('${t._id}')">Request</button>` : ""}
+
+      ${role==="teacher" ? `<button onclick="addTT('${t._id}')">Add Timetable</button>` : ""}
+
+      <button onclick="viewTT('${t._id}')">View</button>
+    </div>
+    `;
+  });
+
+  document.getElementById("data").innerHTML = html;
+}
+
+async function sendReq(tid){
+  await fetch("https://chitkara-faculty-app-2026.onrender.com/request",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      student:userId,
+      teacherId:tid,
+      status:"pending"
+    })
+  });
+  alert("Request Sent");
+}
+
+async function addTT(tid){
+  const day = prompt("Day");
+  const start = prompt("Start Time");
+  const end = prompt("End Time");
+
+  await fetch("https://chitkara-faculty-app-2026.onrender.com/timetable/"+tid,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify([{day,start,end}])
+  });
+
+  alert("Timetable Saved");
+}
+
+async function viewTT(tid){
+  const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/timetable/"+tid);
+  const data = await res.json();
+
+  alert(data.map(t=>t.day+" "+t.start+"-"+t.end).join("\n"));
+}
+
+async function loadRequests(){
+  const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/request/"+userId);
+  const reqs = await res.json();
+
+  let html = "";
+
+  reqs.forEach(r=>{
+    html += `
+    <div class="card">
+      ${r.student} - ${r.status}
+      <button onclick="updateReq('${r._id}','accepted')">✔</button>
+      <button onclick="updateReq('${r._id}','rejected')">❌</button>
+    </div>
+    `;
+  });
+
+  document.getElementById("data").innerHTML = html;
+}
+
+async function updateReq(id,status){
+  await fetch("https://chitkara-faculty-app-2026.onrender.com/request/"+id,{
+    method:"PUT",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({status})
+  });
+}
+
+loadTeachers();
+</script>
+
+</body>
+</html>

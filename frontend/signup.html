@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Faculty Connect - Register</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Create Account</h2>
+        <form id="signupForm">
+            <input type="text" id="name" placeholder="Full Name" required>
+            <input type="text" id="idField" placeholder="Roll No / University ID" required>
+            <input type="email" id="email" placeholder="Email (e.g. name@chitkara.edu.in)" required>
+            
+            <select id="department">
+                <option value="BCA">BCA</option>
+                <option value="CSE">CSE</option>
+                <option value="Other">Other</option>
+            </select>
+
+            <input type="password" id="password" placeholder="Create Password" required>
+            
+            <button type="submit" onclick="handleSignup(event)">Register Now</button>
+        </form>
+        <p>Already have an account? <a href="login.html">Login here</a></p>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

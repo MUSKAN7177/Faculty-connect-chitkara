@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard | Faculty Connect</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container" style="max-width: 900px; border-top: 8px solid var(--chitkara-red);">
+        <h2 id="welcomeMsg">Welcome, Student</h2>
+        <p>Search for faculty and check their live availability status.</p>
+        
+        <input type="text" id="searchInput" placeholder="🔍 Search Faculty by Name or Department..." onkeyup="searchFaculty()">
+        
+        <div id="facultyList" class="dashboard-container">
+            <p>Loading faculty data...</p>
+        </div>
+
+        <button onclick="logout()" style="margin-top: 30px; background: #555; width: 150px;">Logout</button>
+    </div>
+
+    <script>
+        // 1. User details load karna
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (!user) {
+            window.location.href = "login.html";
+        } else {
+            document.getElementById("welcomeMsg").innerText = `Welcome, ${user.name}`;
+        }
+
+        // 2. Faculty list fetch karna (Backend se)
+        async function loadFaculty() {
+            try {
+                const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/teachers");
+                if (!res.ok) throw new Error("Server Error");
+                
+                const teachers = await res.json();
+                displayTeachers(teachers);
+            } catch (err) {
+                console.error(err);
+                document.getElementById("facultyList").innerHTML = 
+                    `<div style="color:red; padding:20px;">🚨 Server Error! Check if your backend is running.</div>`;
+            }
+        }
+
+        // 3. Teachers ko screen par dikhana
+        function displayTeachers(teachers) {
+            const list = document.getElementById("facultyList");
+            list.innerHTML = "";
+            
+            if (teachers.length === 0) {
+                list.innerHTML = "<p>No faculty members found.</p>";
+                return;
+            }
+
+            teachers.forEach(t => {
+                const statusClass = t.status === "Available" ? "free" : "busy";
+                list.innerHTML += `
+                    <div class="card">
+                        <h3>${t.name} <span class="dot ${statusClass}"></span></h3>
+                        <p><strong>Dept:</strong> ${t.department}</p>
+                        <p><strong>Status:</strong> <span style="color:${t.status === 'Available' ? 'green' : 'red'}">${t.status}</span></p>
+                        <button onclick="requestMeeting('${t._id}', '${t.name}')">Request Meeting</button>
+                    </div>
+                `;
+            });
+        }
+
+        // 4. Meeting Request bhejne ka function
+        async function requestMeeting(tId, tName) {
+            try {
+                const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/send-request", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        teacherId: tId, 
+                        studentName: user.name 
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    alert("✅ Request sent to Prof. " + tName);
+                } else {
+                    alert("❌ Error: " + data.msg);
+                }
+            } catch (err) {
+                alert("🚨 Server Error! Backend connect nahi ho pa raha.");
+            }
+        }
+
+        // 5. Search Functionality
+        function searchFaculty() {
+            const term = document.getElementById("searchInput").value.toLowerCase();
+            const cards = document.querySelectorAll(".card");
+            cards.forEach(card => {
+                const text = card.innerText.toLowerCase();
+                card.style.display = text.includes(term) ? "block" : "none";
+            });
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = "role.html";
+        }
+
+        // Page load hote hi data mangwayein
+        window.onload = loadFaculty;
+    </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome | Faculty Connect</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+</head>
+<body>
+    <div class="container" style="max-width: 650px; border-top: 8px solid var(--chitkara-red);">
+        <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" style="width: 250px; margin-bottom: 20px;">
+        <h1 style="color: var(--chitkara-red); font-size: 2.2rem; font-weight: 800;">FACULTY CONNECT</h1>
+        <p style="font-size: 1.1rem; color: #444; margin: 15px 0;">
+            A premium digital bridge by <strong>Chitkara University</strong> <br> 
+            to connect students and teachers in real-time.
+        </p>
+        <div style="background: rgba(139, 0, 0, 0.05); padding: 15px; border-radius: 10px; margin: 20px 0;">
+            <p style="margin-bottom: 0; font-weight: 600; color: var(--chitkara-red);">🚀 Live Status | 📅 Timetables | 📩 Direct Meeting Requests</p>
+        </div>
+        <button onclick="location.href='role.html'" style="padding: 18px; font-size: 1.2rem; letter-spacing: 1px;">GET STARTED →</button>
+        <p style="font-size: 10px; margin-top: 25px; color: #999;">© 2026 Chitkara University | Developed for BCA Final Year Project</p>
+    </div>
+</body>
+</html>

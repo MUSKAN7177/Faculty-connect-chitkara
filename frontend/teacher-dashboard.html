@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Teacher Dashboard | Faculty Connect</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2 id="teacherWelcome">Teacher Dashboard</h2>
+        <p>Update your current availability status:</p>
+        </div>
+        
+     <div style="display: flex; flex-direction: column; gap: 10px; margin: 20px 0;">
+    <button onclick="updateStatus('Available')" style="background: #28a745 !important;">✅ Set Available</button>
+    <button onclick="updateStatus('In Class')" style="background: #dc3545 !important;">🚫 Set Busy</button>
+    <input type="file" id="timetableFile" style="display:none" onchange="uploadTimetable()">
+    <button onclick="document.getElementById('timetableFile').click()" style="background: #ffcc00; color: black;">📅 Upload Timetable</button>
+     </div>
+
+        <div class="card" style="max-width: 400px; margin: 0 auto;">
+            <h4>Current Status</h4>
+            <p id="currentStatus">Loading...</p>
+        </div>
+    </div>
+
+    <script>
+        const user = JSON.parse(localStorage.getItem("user"));
+        document.getElementById("teacherWelcome").innerText = `Welcome, Prof. ${user.name}`;
+        document.getElementById("currentStatus").innerText = user.status || "Available";
+
+        async function updateStatus(newStatus) {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user || !user._id) {
+        alert("Session expired. Please Login again.");
+        window.location.href = "login.html";
+        return;
+    }
+
+    try {
+        const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/update-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: user._id, status: newStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById("currentStatus").innerText = newStatus;
+            alert("✅ Status updated to " + newStatus);
+            // Refresh local data
+            user.status = newStatus;
+            localStorage.setItem("user", JSON.stringify(user));
+        }
+    } catch (err) {
+        alert("🚨 Error updating status. Check if Backend is running.");
+    }
+}
+    </script>
+    <div class="card" style="margin-top: 25px;">
+    <h3>📩 Meeting Requests</h3>
+    <div id="requestList" style="text-align: left; margin-top: 15px;">
+        <p style="color: #666;">No new requests.</p>
+    </div>
+</div>
+
+<script>
+    // window.onload ke andar loadRequests() ko call karein
+    async function loadRequests() {
+        const user = JSON.parse(localStorage.getItem("user"));
+        const list = document.getElementById("requestList");
+        if(user.notifications && user.notifications.length > 0) {
+            list.innerHTML = user.notifications.map(req => `
+                <div style="background: #f9f9f9; padding: 10px; margin-bottom: 5px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <span><strong>${req.studentName}</strong> (Status: ${req.status})</span>
+                    ${req.status === 'pending' ? `
+                        <div>
+                            <button onclick="respond('${req.id}', 'Accepted')" style="width: 70px; background: green; font-size: 10px; margin: 2px;">Accept</button>
+                            <button onclick="respond('${req.id}', 'Declined')" style="width: 70px; background: red; font-size: 10px; margin: 2px;">Decline</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+    }
+    
+    async function respond(reqId, status) {
+        const user = JSON.parse(localStorage.getItem("user"));
+        await fetch("https://chitkara-faculty-app-2026.onrender.com/handle-request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ teacherId: user._id, requestId: parseInt(reqId), newStatus: status })
+        });
+        alert("Request " + status);
+        location.reload(); // Refresh to see changes
+    }
+    window.onload = () => { loadRequests(); };
+</script>
+</body>
+</html>
