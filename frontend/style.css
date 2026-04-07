@@ -239,3 +239,65 @@ button:active {
     font-size: 14px;
     margin-top: 10px;
 }
+/* --- Final ERP Professional Styling --- */
+
+/* Tabs Section */
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: #f1f1f1;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    cursor: pointer;
+    border: none;
+    background: #ffffff;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.tab-btn.active {
+    background: #8b0000; /* Chitkara Red */
+    color: white;
+}
+
+.section-content { display: none; }
+.section-content.active { display: block; }
+
+/* ERP Cards */
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+/* ERP Progress Bar */
+.progress-container {
+    background-color: #e0e0e0;
+    border-radius: 12px;
+    height: 25px;
+    width: 100%;
+    margin: 10px 0;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 12px;
+    background: #28a745;
+    transition: width 0.8s ease-in-out;
+}
+
+/* Appointment Status */
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
