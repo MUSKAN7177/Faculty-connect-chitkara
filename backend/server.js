@@ -165,8 +165,8 @@ app.post("/scan-timetable", async (req, res) => {
         res.status(500).json({ success: false, msg: "OCR Scanning Failed" });
     }
 });
-
+// ✅ Bilkul aisa copy paste karein
 const PORT = process.env.PORT || 10000;
-app.listen(PORT,'0.0.0.0' () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
