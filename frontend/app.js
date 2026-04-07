@@ -2,15 +2,23 @@ const API_BASE = "https://chitkara-faculty-app-2026.onrender.com";
 
 async function handleSignup(event) {
     event.preventDefault();
-    const role = localStorage.getItem("role");
+    // 🚩 Key ko 'userRole' rakha hai taaki login se match kare
+    const role = localStorage.getItem("userRole"); 
     
+    if (!role) {
+        alert("Please select a role first!");
+        window.location.href = "role.html";
+        return;
+    }
+
     const formData = {
-        role,
+        role: role.toLowerCase(), // Backend hamesha lowercase mangta hai
         name: document.getElementById("name").value,
         email: document.getElementById("email").value,
         password: document.getElementById("password").value,
         department: document.getElementById("department").value,
-        [role === "student" ? "rollNo" : "universityId"]: document.getElementById("idField").value
+        // Backend key matching (rollNo for student, universityId for teacher)
+        [role.toLowerCase() === "student" ? "rollNo" : "universityId"]: document.getElementById("idField").value
     };
 
     try {
@@ -22,7 +30,9 @@ async function handleSignup(event) {
         const data = await res.json();
         alert(data.msg);
         if(data.success) window.location.href = "login.html";
-    } catch (error) { alert("🚨 Server is not running!"); }
+    } catch (error) { 
+        alert("🚨 Server connection failed!"); 
+    }
 }
 
 async function handleLogin(event) {
@@ -31,36 +41,35 @@ async function handleLogin(event) {
     const email = document.getElementById("loginEmail").value;
     const password = document.getElementById("loginPassword").value;
     
-    // 🚩 IMPORTANT: LocalStorage se role nikalna (Jo role.html se set hua tha)
-    const role = localStorage.getItem("userRole") || "student"; 
+    // 🚩 Yahan bhi 'userRole' hi use karein
+    let role = localStorage.getItem("userRole");
+    if(!role) role = "student"; 
+    
+    role = role.toLowerCase(); // Safety check
 
     try {
-        const response = await fetch("https://chitkara-faculty-app-2026.onrender.com/login", {
+        const response = await fetch(`${API_BASE}/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password, role })
         });
 
         const data = await response.json();
-        console.log("Login Response:", data); // Browser console mein check karne ke liye
 
         if (data.success) {
-            // User data save karein
             localStorage.setItem("user", JSON.stringify(data.user));
 
-            // 🔍 Redirection Logic (Check spellings carefully!)
+            // Dashboard redirection
             if (role === "student") {
-                console.log("Redirecting to Student Dashboard...");
                 window.location.href = "student-dashboard.html"; 
             } else {
-                console.log("Redirecting to Teacher Dashboard...");
                 window.location.href = "teacher-dashboard.html";
             }
         } else {
-            alert("Invalid Credentials! Please try again.");
+            alert(data.msg || "Invalid Credentials!");
         }
     } catch (err) {
         console.error("Login Error:", err);
-        alert("Server is down. Please try again later.");
+        alert("🚨 Server error. Check if backend is live!");
     }
 }
