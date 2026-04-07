@@ -2,111 +2,70 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard | Faculty Connect</title>
+    <title>Student Dashboard | Faculty Connect</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container" style="max-width: 900px; border-top: 8px solid var(--chitkara-red);">
-        <h2 id="welcomeMsg">Welcome, Professor</h2>
-        <p>Manage your meeting requests and student connections below.</p>
-        
+        <h2 id="welcomeMsg">Welcome, Student</h2>
         <div class="dashboard-section">
-            <h3>New Requests</h3>
-            <div id="notificationContainer" class="dashboard-container">
-                <p>Loading notifications...</p>
+            <h3>Available Faculty</h3>
+            <div id="teacherContainer" class="dashboard-container">
+                <p>Loading teachers...</p>
             </div>
         </div>
-
         <button onclick="logout()" style="margin-top: 30px; background: #555; width: 150px;">Logout</button>
     </div>
 
     <script>
         const user = JSON.parse(localStorage.getItem("user"));
-        if (!user || user.role !== "teacher") { // Basic role check
+        const role = localStorage.getItem("userRole");
+
+        if (!user || role !== "student") {
             window.location.href = "login.html";
         } else {
-            document.getElementById("welcomeMsg").innerText = `Welcome, Prof. ${user.name}`;
+            document.getElementById("welcomeMsg").innerText = `Welcome, ${user.name}`;
         }
 
-        // 1. Notifications fetch aur display karna
-        async function loadNotifications() {
-            const container = document.getElementById("notificationContainer");
-            
+        async function loadTeachers() {
+            const container = document.getElementById("teacherContainer");
             try {
-                // Latest notifications ke liye pure teachers ki list fetch kar rahe hain
                 const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/teachers");
                 const teachers = await res.json();
-                
-                // Login kiye hue teacher ka data filter karna
-                const currentTeacher = teachers.find(t => t._id === user._id);
-                
                 container.innerHTML = "";
-
-                if (!currentTeacher.notifications || currentTeacher.notifications.length === 0) {
-                    container.innerHTML = "<p>No meeting requests found.</p>";
-                    return;
-                }
-
-                // Naye requests ko sabse upar dikhane ke liye reverse()
-                currentTeacher.notifications.slice().reverse().forEach(note => {
-                    const statusColor = note.status === 'pending' ? 'orange' : note.status === 'Accepted' ? 'green' : 'red';
-                    
+                teachers.forEach(t => {
                     container.innerHTML += `
-                        <div class="card" style="border-left: 5px solid ${statusColor}; margin-bottom: 15px;">
-                            <h4>From: ${note.studentName}</h4>
-                            <p><strong>Message:</strong> ${note.message || "No message provided."}</p>
-                            <p>Status: <span style="color: ${statusColor}; font-weight: bold;">${note.status.toUpperCase()}</span></p>
-                            
-                            ${note.status === 'pending' ? `
-                                <div style="margin-top: 10px;">
-                                    <button onclick="updateStatus('${note.id}', '${note.studentId}', 'Accepted')" style="background:green; margin-right:10px;">Accept</button>
-                                    <button onclick="updateStatus('${note.id}', '${note.studentId}', 'Rejected')" style="background:red;">Reject</button>
-                                </div>
-                            ` : `<p><i>Action already taken</i></p>`}
-                        </div>
-                    `;
+                        <div class="card">
+                            <h4>Prof. ${t.name}</h4>
+                            <p>Dept: ${t.department}</p>
+                            <p>Status: <span style="color: ${t.status === 'Available' ? 'green' : 'red'}; font-weight:bold;">${t.status}</span></p>
+                            <button onclick="sendRequest('${t._id}', '${t.name}')">Send Request</button>
+                        </div>`;
                 });
-            } catch (err) {
-                console.error(err);
-                container.innerHTML = "<p style='color:red;'>Error loading notifications. Please try again.</p>";
-            }
+            } catch (err) { container.innerHTML = "Error loading teachers."; }
         }
 
-        // 2. Status update aur student ko mail bhejne wala logic
-        async function updateStatus(notifId, sId, status) {
-            if(!confirm(`Are you sure you want to ${status} this request?`)) return;
-
+        async function sendRequest(tId, tName) {
+            const msg = prompt(`Enter message for Prof. ${tName}:`);
+            if(!msg) return;
             try {
-                const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/update-status", {
+                const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/send-request", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        teacherId: user._id,
-                        studentId: sId,
-                        notificationId: notifId,
-                        newStatus: status
+                        teacherId: tId,
+                        studentName: user.name,
+                        studentId: user._id,
+                        message: msg
                     })
                 });
-
                 const data = await res.json();
-                if (data.success) {
-                    alert(`✅ Meeting ${status}! Student has been notified via email.`);
-                    loadNotifications(); // UI refresh
-                } else {
-                    alert("❌ Error: " + data.msg);
-                }
-            } catch (err) {
-                alert("🚨 Server error! Student ko mail nahi ja paya.");
-            }
+                alert(data.msg);
+            } catch (err) { alert("Failed to send request."); }
         }
 
-        function logout() {
-            localStorage.clear();
-            window.location.href = "role.html";
-        }
-
-        window.onload = loadNotifications;
+        function logout() { localStorage.clear(); window.location.href = "role.html"; }
+        window.onload = loadTeachers;
     </script>
 </body>
 </html>
