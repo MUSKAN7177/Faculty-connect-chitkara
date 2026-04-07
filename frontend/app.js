@@ -1,9 +1,11 @@
 const API_BASE = "https://chitkara-faculty-app-2026.onrender.com";
 
+// --- SIGNUP LOGIC ---
 async function handleSignup(event) {
     event.preventDefault();
-    // 🚩 Key ko 'userRole' rakha hai taaki login se match kare
-    const role = localStorage.getItem("userRole"); 
+    
+    // Role fetch karna (lowercase safety ke saath)
+    const role = localStorage.getItem("userRole") ? localStorage.getItem("userRole").toLowerCase() : null; 
     
     if (!role) {
         alert("Please select a role first!");
@@ -11,14 +13,15 @@ async function handleSignup(event) {
         return;
     }
 
+    // Form data taiyar karna
     const formData = {
-        role: role.toLowerCase(), // Backend hamesha lowercase mangta hai
+        role: role,
         name: document.getElementById("name").value,
         email: document.getElementById("email").value,
         password: document.getElementById("password").value,
         department: document.getElementById("department").value,
-        // Backend key matching (rollNo for student, universityId for teacher)
-        [role.toLowerCase() === "student" ? "rollNo" : "universityId"]: document.getElementById("idField").value
+        // Backend matching: student ke liye rollNo, teacher ke liye universityId
+        [role === "student" ? "rollNo" : "universityId"]: document.getElementById("idField").value
     };
 
     try {
@@ -28,24 +31,34 @@ async function handleSignup(event) {
             body: JSON.stringify(formData)
         });
         const data = await res.json();
-        alert(data.msg);
-        if(data.success) window.location.href = "login.html";
+        
+        if(data.success) {
+            alert("Registration Successful!");
+            window.location.href = "login.html";
+        } else {
+            alert("Registration Failed: " + data.msg);
+        }
     } catch (error) { 
         alert("🚨 Server connection failed!"); 
     }
 }
 
+// --- LOGIN LOGIC ---
 async function handleLogin(event) {
     event.preventDefault();
 
     const email = document.getElementById("loginEmail").value;
     const password = document.getElementById("loginPassword").value;
     
-    // 🚩 Yahan bhi 'userRole' hi use karein
+    // Role selection fetch karna
     let role = localStorage.getItem("userRole");
-    if(!role) role = "student"; 
+    if(!role) {
+        alert("Please select your role (Student/Teacher) on the role page first.");
+        window.location.href = "role.html";
+        return;
+    }
     
-    role = role.toLowerCase(); // Safety check
+    role = role.toLowerCase();
 
     try {
         const response = await fetch(`${API_BASE}/login`, {
@@ -57,9 +70,11 @@ async function handleLogin(event) {
         const data = await response.json();
 
         if (data.success) {
+            // User data aur role dono save karein taaki dashboard error na de
             localStorage.setItem("user", JSON.stringify(data.user));
+            localStorage.setItem("userRole", role); 
 
-            // Dashboard redirection
+            // Correct dashboard par bhejna
             if (role === "student") {
                 window.location.href = "student-dashboard.html"; 
             } else {

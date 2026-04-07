@@ -6,66 +6,57 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container" style="max-width: 900px; border-top: 8px solid var(--chitkara-red);">
-        <h2 id="welcomeMsg">Welcome, Student</h2>
-        <div class="dashboard-section">
-            <h3>Available Faculty</h3>
-            <div id="teacherContainer" class="dashboard-container">
-                <p>Loading teachers...</p>
-            </div>
+    <div class="container" style="max-width: 900px;">
+        <h2 id="welcomeMsg">Welcome</h2>
+        
+        <div class="card" style="display: flex; justify-content: space-around; background: #f9f9f9;">
+            <div><h4>Attendance</h4><p id="myAtt">0%</p></div>
+            <div><h4>ST1 Marks</h4><p id="myST1">0</p></div>
+            <div><h4>ST2 Marks</h4><p id="myST2">0</p></div>
         </div>
-        <button onclick="logout()" style="margin-top: 30px; background: #555; width: 150px;">Logout</button>
+
+        <div class="card">
+            <h3>📚 Study Material / Notes</h3>
+            <div id="notesList">Loading notes...</div>
+        </div>
+
+        <button onclick="logout()" style="margin-top: 20px; background: #555;">Logout</button>
     </div>
 
     <script>
         const user = JSON.parse(localStorage.getItem("user"));
-        const role = localStorage.getItem("userRole");
+        const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
 
-        if (!user || role !== "student") {
-            window.location.href = "login.html";
-        } else {
-            document.getElementById("welcomeMsg").innerText = `Welcome, ${user.name}`;
-        }
+        if (!user || localStorage.getItem("userRole") !== "student") window.location.href = "login.html";
+        document.getElementById("welcomeMsg").innerText = `Welcome, ${user.name}`;
 
-        async function loadTeachers() {
-            const container = document.getElementById("teacherContainer");
-            try {
-                const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/teachers");
-                const teachers = await res.json();
-                container.innerHTML = "";
-                teachers.forEach(t => {
-                    container.innerHTML += `
-                        <div class="card">
-                            <h4>Prof. ${t.name}</h4>
-                            <p>Dept: ${t.department}</p>
-                            <p>Status: <span style="color: ${t.status === 'Available' ? 'green' : 'red'}; font-weight:bold;">${t.status}</span></p>
-                            <button onclick="sendRequest('${t._id}', '${t.name}')">Send Request</button>
-                        </div>`;
-                });
-            } catch (err) { container.innerHTML = "Error loading teachers."; }
-        }
+        async function loadData() {
+            // 1. Get Student's own academic data
+            const resData = await fetch(`${API_URL}/students`);
+            const students = await resData.json();
+            const me = students.find(s => s._id === user._id);
+            if(me) {
+                document.getElementById("myAtt").innerText = (me.attendance || 0) + "%";
+                document.getElementById("myST1").innerText = me.marks?.st1 || 0;
+                document.getElementById("myST2").innerText = me.marks?.st2 || 0;
+            }
 
-        async function sendRequest(tId, tName) {
-            const msg = prompt(`Enter message for Prof. ${tName}:`);
-            if(!msg) return;
-            try {
-                const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/send-request", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        teacherId: tId,
-                        studentName: user.name,
-                        studentId: user._id,
-                        message: msg
-                    })
-                });
-                const data = await res.json();
-                alert(data.msg);
-            } catch (err) { alert("Failed to send request."); }
+            // 2. Get Notes
+            const resNotes = await fetch(`${API_URL}/notes`);
+            const notes = await resNotes.json();
+            const list = document.getElementById("notesList");
+            list.innerHTML = "";
+            notes.forEach(n => {
+                list.innerHTML += `
+                    <div style="border-bottom: 1px solid #eee; padding: 10px;">
+                        <strong>${n.subject}</strong> (by Prof. ${n.teacherName}) 
+                        <a href="${n.link}" target="_blank" style="color: blue; margin-left: 10px;">View Note</a>
+                    </div>`;
+            });
         }
 
         function logout() { localStorage.clear(); window.location.href = "role.html"; }
-        window.onload = loadTeachers;
+        window.onload = loadData;
     </script>
 </body>
 </html>

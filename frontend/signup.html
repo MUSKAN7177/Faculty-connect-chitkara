@@ -10,7 +10,8 @@
         <h2>Create Account</h2>
         <form id="signupForm">
             <input type="text" id="name" placeholder="Full Name" required>
-            <input type="text" id="idField" placeholder="Roll No / University ID" required>
+            <input type="text" id="rollNo" placeholder="Roll Number (Students only)">
+            <input type="text" id="idField" placeholder="University/Faculty ID" required>
             <input type="email" id="email" placeholder="Email (e.g. name@chitkara.edu.in)" required>
             
             <select id="department">
@@ -20,7 +21,6 @@
             </select>
 
             <input type="password" id="password" placeholder="Create Password" required>
-            
             <button type="submit" onclick="handleSignup(event)">Register Now</button>
         </form>
         <p>Already have an account? <a href="login.html">Login here</a></p>
