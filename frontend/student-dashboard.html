@@ -3,101 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Dashboard | Faculty Connect</title>
+    <title>Teacher Dashboard | Faculty Connect</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container" style="max-width: 900px; border-top: 8px solid var(--chitkara-red);">
-        <h2 id="welcomeMsg">Welcome, Student</h2>
-        <p>Search for faculty and check their live availability status.</p>
+        <h2 id="welcomeMsg">Welcome, Professor</h2>
+        <p>Manage your meeting requests and student connections below.</p>
         
-        <input type="text" id="searchInput" placeholder="🔍 Search Faculty by Name or Department..." onkeyup="searchFaculty()">
-        
-        <div id="facultyList" class="dashboard-container">
-            <p>Loading faculty data...</p>
+        <div class="dashboard-section">
+            <h3>New Requests</h3>
+            <div id="notificationContainer" class="dashboard-container">
+                <p>Loading notifications...</p>
+            </div>
         </div>
 
         <button onclick="logout()" style="margin-top: 30px; background: #555; width: 150px;">Logout</button>
     </div>
 
     <script>
-        // 1. User details load karna
         const user = JSON.parse(localStorage.getItem("user"));
-        if (!user) {
+        if (!user || user.role !== "teacher") { // Basic role check
             window.location.href = "login.html";
         } else {
-            document.getElementById("welcomeMsg").innerText = `Welcome, ${user.name}`;
+            document.getElementById("welcomeMsg").innerText = `Welcome, Prof. ${user.name}`;
         }
 
-        // 2. Faculty list fetch karna (Backend se)
-        async function loadFaculty() {
+        // 1. Notifications fetch aur display karna
+        async function loadNotifications() {
+            const container = document.getElementById("notificationContainer");
+            
             try {
+                // Latest notifications ke liye pure teachers ki list fetch kar rahe hain
                 const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/teachers");
-                if (!res.ok) throw new Error("Server Error");
-                
                 const teachers = await res.json();
-                displayTeachers(teachers);
+                
+                // Login kiye hue teacher ka data filter karna
+                const currentTeacher = teachers.find(t => t._id === user._id);
+                
+                container.innerHTML = "";
+
+                if (!currentTeacher.notifications || currentTeacher.notifications.length === 0) {
+                    container.innerHTML = "<p>No meeting requests found.</p>";
+                    return;
+                }
+
+                // Naye requests ko sabse upar dikhane ke liye reverse()
+                currentTeacher.notifications.slice().reverse().forEach(note => {
+                    const statusColor = note.status === 'pending' ? 'orange' : note.status === 'Accepted' ? 'green' : 'red';
+                    
+                    container.innerHTML += `
+                        <div class="card" style="border-left: 5px solid ${statusColor}; margin-bottom: 15px;">
+                            <h4>From: ${note.studentName}</h4>
+                            <p><strong>Message:</strong> ${note.message || "No message provided."}</p>
+                            <p>Status: <span style="color: ${statusColor}; font-weight: bold;">${note.status.toUpperCase()}</span></p>
+                            
+                            ${note.status === 'pending' ? `
+                                <div style="margin-top: 10px;">
+                                    <button onclick="updateStatus('${note.id}', '${note.studentId}', 'Accepted')" style="background:green; margin-right:10px;">Accept</button>
+                                    <button onclick="updateStatus('${note.id}', '${note.studentId}', 'Rejected')" style="background:red;">Reject</button>
+                                </div>
+                            ` : `<p><i>Action already taken</i></p>`}
+                        </div>
+                    `;
+                });
             } catch (err) {
                 console.error(err);
-                document.getElementById("facultyList").innerHTML = 
-                    `<div style="color:red; padding:20px;">🚨 Server Error! Check if your backend is running.</div>`;
+                container.innerHTML = "<p style='color:red;'>Error loading notifications. Please try again.</p>";
             }
         }
 
-        // 3. Teachers ko screen par dikhana
-        function displayTeachers(teachers) {
-            const list = document.getElementById("facultyList");
-            list.innerHTML = "";
-            
-            if (teachers.length === 0) {
-                list.innerHTML = "<p>No faculty members found.</p>";
-                return;
-            }
+        // 2. Status update aur student ko mail bhejne wala logic
+        async function updateStatus(notifId, sId, status) {
+            if(!confirm(`Are you sure you want to ${status} this request?`)) return;
 
-            teachers.forEach(t => {
-                const statusClass = t.status === "Available" ? "free" : "busy";
-                list.innerHTML += `
-                    <div class="card">
-                        <h3>${t.name} <span class="dot ${statusClass}"></span></h3>
-                        <p><strong>Dept:</strong> ${t.department}</p>
-                        <p><strong>Status:</strong> <span style="color:${t.status === 'Available' ? 'green' : 'red'}">${t.status}</span></p>
-                        <button onclick="requestMeeting('${t._id}', '${t.name}')">Request Meeting</button>
-                    </div>
-                `;
-            });
-        }
-
-        // 4. Meeting Request bhejne ka function
-        async function requestMeeting(tId, tName) {
             try {
-                const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/send-request", {
+                const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/update-status", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ 
-                        teacherId: tId, 
-                        studentName: user.name 
+                    body: JSON.stringify({
+                        teacherId: user._id,
+                        studentId: sId,
+                        notificationId: notifId,
+                        newStatus: status
                     })
                 });
 
                 const data = await res.json();
                 if (data.success) {
-                    alert("✅ Request sent to Prof. " + tName);
+                    alert(`✅ Meeting ${status}! Student has been notified via email.`);
+                    loadNotifications(); // UI refresh
                 } else {
                     alert("❌ Error: " + data.msg);
                 }
             } catch (err) {
-                alert("🚨 Server Error! Backend connect nahi ho pa raha.");
+                alert("🚨 Server error! Student ko mail nahi ja paya.");
             }
-        }
-
-        // 5. Search Functionality
-        function searchFaculty() {
-            const term = document.getElementById("searchInput").value.toLowerCase();
-            const cards = document.querySelectorAll(".card");
-            cards.forEach(card => {
-                const text = card.innerText.toLowerCase();
-                card.style.display = text.includes(term) ? "block" : "none";
-            });
         }
 
         function logout() {
@@ -105,8 +106,7 @@
             window.location.href = "role.html";
         }
 
-        // Page load hote hi data mangwayein
-        window.onload = loadFaculty;
+        window.onload = loadNotifications;
     </script>
 </body>
 </html>

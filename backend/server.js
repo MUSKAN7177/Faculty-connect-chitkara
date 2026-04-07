@@ -1,19 +1,20 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require('dotenv').config(); // Agar .env use kar rahe ho
+require('dotenv').config(); 
+const sendEmail = require('./utils/sendEmail'); 
+const Tesseract = require('tesseract.js'); 
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔗 Health Check Route (For Render)
+// 🔗 Health Check Route
 app.get("/", (req, res) => {
     res.send("Backend is Running Successfully!");
 });
 
 // 🔗 Database Connection
-// Yahan apna database name 'BCA_Project' (ya jo bhi ho) add karein
 const dbURI = "mongodb+srv://muskanahuja:muskan78140@cluster0.auuqv3k.mongodb.net/BCA_Project?retryWrites=true&w=majority";
 
 mongoose.connect(dbURI)
@@ -80,8 +81,9 @@ app.get("/teachers", async (req, res) => {
 
 app.post("/send-request", async (req, res) => {
     try {
-        const { teacherId, studentName, studentId } = req.body;
+        const { teacherId, studentName, studentId, message } = req.body;
         const teacher = await Teacher.findById(teacherId);
+        
         if (!teacher) return res.status(404).json({ success: false, msg: "Teacher not found" });
 
         await Teacher.findByIdAndUpdate(teacherId, { 
@@ -89,18 +91,81 @@ app.post("/send-request", async (req, res) => {
                 notifications: { 
                     studentName, 
                     studentId, 
+                    message, 
                     status: "pending", 
                     id: Date.now() 
                 } 
             } 
         });
-        res.json({ success: true, msg: "Request Sent!" });
+
+        await sendEmail({
+            email: teacher.email, 
+            subject: `Faculty Connect: New Request from ${studentName}`,
+            message: `Hello Professor,\n\nYou have a new connection request on Faculty Connect.\n\nStudent Name: ${studentName}\nMessage: ${message || "I would like to connect regarding academic queries."}\n\nPlease log in to your dashboard to respond.`
+        });
+
+        res.json({ success: true, msg: "Request Sent & Email Delivered!" });
+
     } catch (err) { 
+        console.error(err);
         res.status(500).json({ success: false, msg: "Server Error" }); 
     }
 });
 
-// Use dynamic port for Render
+// 🔗 UPDATE REQUEST STATUS
+app.post("/update-status", async (req, res) => {
+    try {
+        const { teacherId, studentId, notificationId, newStatus } = req.body;
+
+        const student = await Student.findById(studentId);
+        const teacher = await Teacher.findById(teacherId);
+
+        if (!student || !teacher) {
+            return res.status(404).json({ success: false, msg: "User details not found" });
+        }
+
+        await Teacher.updateOne(
+            { _id: teacherId, "notifications.id": Number(notificationId) },
+            { $set: { "notifications.$.status": newStatus } }
+        );
+
+        await sendEmail({
+            email: student.email,
+            subject: `Meeting Request ${newStatus}: Faculty Connect`,
+            message: `Hello ${student.name},\n\nYour meeting request with Prof. ${teacher.name} has been ${newStatus.toLowerCase()}.\n\nPlease check your dashboard for further details.`
+        });
+
+        res.json({ success: true, msg: `Status updated to ${newStatus} and email sent!` });
+
+    } catch (err) {
+        console.error("Update Status Error:", err);
+        res.status(500).json({ success: false, msg: "Server Error" });
+    }
+});
+
+// 📅 TIMETABLE SCANNING ROUTE
+app.post("/scan-timetable", async (req, res) => {
+    try {
+        const { teacherId, imageUrl } = req.body;
+
+        const result = await Tesseract.recognize(imageUrl, 'eng');
+        const extractedText = result.data.text;
+        const timetableArray = extractedText.split('\n').filter(line => line.trim() !== "");
+
+        await Teacher.findByIdAndUpdate(teacherId, { timetable: timetableArray });
+
+        res.json({ 
+            success: true, 
+            msg: "Timetable Scanned & Updated!", 
+            data: timetableArray 
+        });
+
+    } catch (err) {
+        console.error("OCR Error:", err);
+        res.status(500).json({ success: false, msg: "OCR Scanning Failed" });
+    }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
