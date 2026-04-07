@@ -93,11 +93,26 @@ app.get("/students", async (req, res) => {
 app.post("/update-academics", async (req, res) => {
     try {
         const { studentId, attendance, marks } = req.body;
-        await Student.findByIdAndUpdate(studentId, { attendance, marks });
-        res.json({ success: true, msg: "Academic records updated!" });
-    } catch (err) { res.status(500).json({ success: false, msg: "Update failed" }); }
-});
+        const student = await Student.findById(studentId);
 
+        // 1. Attendance update karein
+        await Student.findByIdAndUpdate(studentId, { attendance, marks });
+
+        // 2. 🚨 Automatic Notification Logic (75% Check)
+        if (Number(attendance) < 75) {
+            await sendEmail({
+                email: student.email,
+                subject: "⚠️ Low Attendance Alert: Faculty Connect",
+                message: `Hi ${student.name},\n\nYour attendance in Faculty Connect has dropped to ${attendance}%. Please ensure it stays above 75% to meet the academic criteria.\n\nRegards,\nAcademic Department`
+            });
+            console.log(`Alert sent to ${student.name} for ${attendance}% attendance.`);
+        }
+
+        res.json({ success: true, msg: "Academic records updated & checks completed!" });
+    } catch (err) { 
+        res.status(500).json({ success: false, msg: "Update failed" }); 
+    }
+});
 // 📚 NOTES ROUTES
 app.post("/upload-note", async (req, res) => {
     try {

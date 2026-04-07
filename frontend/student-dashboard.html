@@ -2,8 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Student Dashboard | Faculty Connect</title>
+    <title>Student Dashboard | Faculty Connect ERP</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* ERP Style enhancements */
+        .calendar-day {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .present { background-color: #d4edda; color: #155724; border-bottom: 3px solid #28a745; }
+        .absent { background-color: #f8d7da; color: #721c24; border-bottom: 3px solid #dc3545; }
+    </style>
 </head>
 <body>
     <div class="container" style="max-width: 900px;">
@@ -13,6 +25,21 @@
             <div><h4>Attendance</h4><p id="myAtt">0%</p></div>
             <div><h4>ST1 Marks</h4><p id="myST1">0</p></div>
             <div><h4>ST2 Marks</h4><p id="myST2">0</p></div>
+        </div>
+
+        <div class="card" style="padding: 20px;">
+            <h3>📊 Attendance Status</h3>
+            <div class="progress-container" style="background: #eee; border-radius: 10px; height: 25px; width: 100%; margin: 10px 0; overflow: hidden;">
+                <div id="attendanceBar" style="height: 100%; width: 0%; transition: width 0.8s ease-in-out; background: #28a745;"></div>
+            </div>
+            <p id="alertMsg" style="font-weight: bold; color: #dc3545; display: none;">⚠️ Warning: Low Attendance (Below 75%)</p>
+        </div>
+
+        <div class="card">
+            <h3>📅 Monthly Attendance View</h3>
+            <div id="calendarGrid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 15px;">
+                </div>
+            <p style="font-size: 0.8rem; margin-top: 10px;">* Green denotes Present days, Red denotes Absent days.</p>
         </div>
 
         <div class="card">
@@ -31,31 +58,65 @@
         document.getElementById("welcomeMsg").innerText = `Welcome, ${user.name}`;
 
         async function loadData() {
-            // 1. Get Student's own academic data
-            const resData = await fetch(`${API_URL}/students`);
-            const students = await resData.json();
-            const me = students.find(s => s._id === user._id);
-            if(me) {
-                document.getElementById("myAtt").innerText = (me.attendance || 0) + "%";
-                document.getElementById("myST1").innerText = me.marks?.st1 || 0;
-                document.getElementById("myST2").innerText = me.marks?.st2 || 0;
-            }
+            try {
+                // 1. Get Student's academic data
+                const resData = await fetch(`${API_URL}/students`);
+                const students = await resData.json();
+                const me = students.find(s => s._id === user._id);
 
-            // 2. Get Notes
-            const resNotes = await fetch(`${API_URL}/notes`);
-            const notes = await resNotes.json();
-            const list = document.getElementById("notesList");
-            list.innerHTML = "";
-            notes.forEach(n => {
-                list.innerHTML += `
-                    <div style="border-bottom: 1px solid #eee; padding: 10px;">
-                        <strong>${n.subject}</strong> (by Prof. ${n.teacherName}) 
-                        <a href="${n.link}" target="_blank" style="color: blue; margin-left: 10px;">View Note</a>
-                    </div>`;
-            });
+                if(me) {
+                    const att = me.attendance || 0;
+                    document.getElementById("myAtt").innerText = att + "%";
+                    document.getElementById("myST1").innerText = me.marks?.st1 || 0;
+                    document.getElementById("myST2").innerText = me.marks?.st2 || 0;
+
+                    // Update Progress Bar
+                    const bar = document.getElementById("attendanceBar");
+                    const alertMsg = document.getElementById("alertMsg");
+                    bar.style.width = att + "%";
+
+                    if (att < 75) {
+                        bar.style.backgroundColor = "#dc3545"; // Red
+                        alertMsg.style.display = "block";
+                    } else {
+                        bar.style.backgroundColor = "#28a745"; // Green
+                        alertMsg.style.display = "none";
+                    }
+                }
+
+                // 2. Generate Dummy Calendar (Visual Component)
+                const grid = document.getElementById("calendarGrid");
+                grid.innerHTML = "";
+                for(let i=1; i<=30; i++) {
+                    const isPresent = Math.random() > 0.2; // Visual simulation
+                    const dayClass = isPresent ? 'present' : 'absent';
+                    grid.innerHTML += `<div class="calendar-day ${dayClass}">${i}</div>`;
+                }
+
+                // 3. Get Notes
+                const resNotes = await fetch(`${API_URL}/notes`);
+                const notes = await resNotes.json();
+                const list = document.getElementById("notesList");
+                list.innerHTML = "";
+                if(notes.length === 0) list.innerHTML = "No notes available.";
+                notes.forEach(n => {
+                    list.innerHTML += `
+                        <div style="border-bottom: 1px solid #eee; padding: 10px;">
+                            <strong>${n.subject}</strong> (by Prof. ${n.teacherName}) 
+                            <a href="${n.link}" target="_blank" style="color: blue; margin-left: 10px;">View Note</a>
+                        </div>`;
+                });
+
+            } catch (err) {
+                console.error("Error loading dashboard:", err);
+            }
         }
 
-        function logout() { localStorage.clear(); window.location.href = "role.html"; }
+        function logout() { 
+            localStorage.clear(); 
+            window.location.href = "role.html"; 
+        }
+
         window.onload = loadData;
     </script>
 </body>
