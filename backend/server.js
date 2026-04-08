@@ -1,13 +1,21 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const nodemailer = require("nodemailer"); // 👈 Added Nodemailer
 require('dotenv').config(); 
-const sendEmail = require('./utils/sendEmail'); 
-const Tesseract = require('tesseract.js'); 
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// 📧 Nodemailer Transporter Setup
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS // 16-digit App Password
+    }
+});
 
 // 🔗 Health Check
 app.get("/", (req, res) => res.send("Backend is Running Successfully!"));
@@ -19,17 +27,16 @@ mongoose.connect(dbURI)
     .then(() => console.log("✅ MongoDB Atlas Connected"))
     .catch(err => console.log("❌ DB Connection Error:", err));
 
-// 📝 UPDATED SCHEMAS (Phase 2)
+// 📝 SCHEMAS
 const TeacherSchema = new mongoose.Schema({
     name: String, 
     universityId: String, 
     email: String, 
     password: String, 
     department: String,
-    subjects: [String], // Teacher jo subjects padhate hain
+    subjects: [String],
     status: { type: String, default: "Available" },
-    notifications: { type: Array, default: [] },
-    timetable: { type: Array, default: [] }
+    notifications: { type: Array, default: [] }
 });
 
 const StudentSchema = new mongoose.Schema({
@@ -38,13 +45,10 @@ const StudentSchema = new mongoose.Schema({
     email: String, 
     password: String, 
     department: String,
-    // Academic Data
     attendance: { type: Number, default: 0 },
     marks: {
         st1: { type: Number, default: 0 },
-        st2: { type: Number, default: 0 },
-        internal: { type: Number, default: 0 },
-        external: { type: Number, default: 0 }
+        st2: { type: Number, default: 0 }
     }
 });
 
@@ -52,7 +56,8 @@ const NotesSchema = new mongoose.Schema({
     subject: String,
     teacherName: String,
     link: String,
-    date: { type: Date, default: Date.now }
+    category: { type: String, default: 'note' }, // 'note' or 'timetable'
+    date: { type: Date, default: Date.now } // 👈 Fixed comma here
 });
 
 const Teacher = mongoose.model("Teacher", TeacherSchema);
@@ -80,8 +85,7 @@ app.post("/login", async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, msg: "Server Error" }); }
 });
 
-// 📊 ACADEMIC ROUTES (Attendance & Marks)
-// Get all students for Teacher Dashboard
+// 📊 ACADEMIC ROUTES
 app.get("/students", async (req, res) => {
     try {
         const students = await Student.find({}, { password: 0 });
@@ -89,45 +93,31 @@ app.get("/students", async (req, res) => {
     } catch (err) { res.status(500).json({ msg: "Error fetching students" }); }
 });
 
-// Update Attendance & Marks
 app.post("/update-academics", async (req, res) => {
     try {
         const { studentId, attendance, marks } = req.body;
-        const student = await Student.findById(studentId);
-
-        // 1. Attendance update karein
         await Student.findByIdAndUpdate(studentId, { attendance, marks });
-
-        // 2. 🚨 Automatic Notification Logic (75% Check)
-        if (Number(attendance) < 75) {
-            await sendEmail({
-                email: student.email,
-                subject: "⚠️ Low Attendance Alert: Faculty Connect",
-                message: `Hi ${student.name},\n\nYour attendance in Faculty Connect has dropped to ${attendance}%. Please ensure it stays above 75% to meet the academic criteria.\n\nRegards,\nAcademic Department`
-            });
-            console.log(`Alert sent to ${student.name} for ${attendance}% attendance.`);
-        }
-
-        res.json({ success: true, msg: "Academic records updated & checks completed!" });
-    } catch (err) { 
-        res.status(500).json({ success: false, msg: "Update failed" }); 
-    }
+        res.json({ success: true, msg: "Records updated!" });
+    } catch (err) { res.status(500).json({ success: false }); }
 });
-// 📚 NOTES ROUTES
-app.post("/upload-note", async (req, res) => {
+
+// 📚 NOTES & TIMETABLE ROUTES
+app.post("/notes", async (req, res) => { // Unified route for Teacher Dashboard
     try {
         const newNote = new Notes(req.body);
         await newNote.save();
-        res.json({ success: true, msg: "Note Link Shared!" });
+        res.json({ success: true, msg: "Shared Successfully!" });
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
 app.get("/notes", async (req, res) => {
-    const notes = await Notes.find().sort({ date: -1 });
-    res.json(notes);
+    try {
+        const notes = await Notes.find().sort({ date: -1 });
+        res.json(notes);
+    } catch (err) { res.status(500).json([]); }
 });
 
-// 🏫 FACULTY FEATURES (Requests & Status)
+// 🏫 FACULTY & APPOINTMENTS
 app.get("/teachers", async (req, res) => {
     const teachers = await Teacher.find({}, { password: 0 });
     res.json(teachers);
@@ -136,39 +126,39 @@ app.get("/teachers", async (req, res) => {
 app.post("/send-request", async (req, res) => {
     try {
         const { teacherId, studentName, studentId, message } = req.body;
-        const teacher = await Teacher.findById(teacherId);
-        
         await Teacher.findByIdAndUpdate(teacherId, { 
             $push: { notifications: { studentName, studentId, message, status: "pending", id: Date.now() } } 
-        });
-
-        await sendEmail({
-            email: teacher.email, 
-            subject: `New Request from ${studentName}`,
-            message: `Hello Professor, ${studentName} wants to connect. Message: ${message}`
         });
         res.json({ success: true, msg: "Request Sent!" });
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
 app.post("/update-status", async (req, res) => {
+    const { teacherId, studentId, notificationId, newStatus } = req.body;
     try {
-        const { teacherId, studentId, notificationId, newStatus } = req.body;
-        const student = await Student.findById(studentId);
-        const teacher = await Teacher.findById(teacherId);
-
+        // 1. Update Teacher Notification
         await Teacher.updateOne(
             { _id: teacherId, "notifications.id": Number(notificationId) },
             { $set: { "notifications.$.status": newStatus } }
         );
 
-        await sendEmail({
-            email: student.email,
-            subject: `Request ${newStatus}`,
-            message: `Hi ${student.name}, Prof. ${teacher.name} has ${newStatus.toLowerCase()} your request.`
-        });
-        res.json({ success: true, msg: "Status Updated!" });
-    } catch (err) { res.status(500).json({ success: false }); }
+        // 2. Fetch Student Email
+        const student = await Student.findById(studentId);
+        
+        // 3. Send Email using Transporter
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: student.email,
+            subject: `Appointment Update: ${newStatus}`,
+            text: `Hello ${student.name}, your appointment request has been ${newStatus}. Check your portal for details.`
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ success: true, message: "Status updated and email sent!" });
+    } catch (err) {
+        console.error("Email Error:", err);
+        res.status(500).json({ success: false, error: "Status updated, but email failed." });
+    }
 });
 
 // 🚀 SERVER

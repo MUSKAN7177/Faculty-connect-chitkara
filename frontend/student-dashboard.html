@@ -4,17 +4,55 @@
     <meta charset="UTF-8">
     <title>Student ERP | Faculty Connect</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Container width fix for professional look */
+        .container { max-width: 1100px !important; width: 95%; margin: 20px auto; }
+        
+        /* CUIMS Grid Styling */
+        .cuims-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+        .grid-item { 
+            background: white; padding: 15px; border-radius: 12px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; 
+            transition: 0.3s; text-align: center;
+        }
+        .grid-item:hover { transform: translateY(-5px); }
+        .grid-item p { font-size: 12px; font-weight: bold; color: #8b0000; margin-top: 5px; }
+
+        /* Timetable Period Styling */
+        .period-card {
+            border-left: 5px solid #28a745; background: #f8f9fa; 
+            padding: 15px; margin-bottom: 10px; display: flex; 
+            justify-content: space-between; border-radius: 0 8px 8px 0;
+        }
+        .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; color: white; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h2 id="welcomeText">Student ERP Portal</h2>
+        <h2 id="welcomeText" style="text-align: center; padding-bottom: 10px;">Student ERP Portal</h2>
         
-        <nav class="tabs">
-            <button class="tab-btn active" id="tab-academics" onclick="showTab('academics')">📋 Academic Progress</button>
-            <button class="tab-btn" id="tab-book" onclick="showTab('book')">🤝 Book Appointment</button>
-            <button class="tab-btn" id="tab-material" onclick="showTab('material')">📚 Notes & Timetable</button>
-        </nav>
+        <div class="cuims-grid">
+            <div class="grid-item" onclick="showTab('academics')">
+                <img src="https://cdn-icons-png.flaticon.com/512/3589/3589030.png" width="40">
+                <p>Attendance</p>
+            </div>
+            <div class="grid-item" onclick="showTab('material')">
+                <img src="https://cdn-icons-png.flaticon.com/512/2436/2436636.png" width="40">
+                <p>Resources</p>
+            </div>
+            <div class="grid-item" onclick="showTab('timetable')">
+                <img src="https://cdn-icons-png.flaticon.com/512/3652/3652191.png" width="40">
+                <p>Time Table</p>
+            </div>
+        </div>
 
+        <div id="timetable" class="section-content" style="display: none;">
+            <div class="academic-card">
+                <h3 style="border-bottom: 2px solid #f1f1f1; padding-bottom: 10px; margin-bottom: 15px;">Wednesday (Today) ▼</h3>
+                <div id="detailedTimetable">Loading schedule...</div>
+            </div>
+        </div>
+        
         <div id="academics" class="section-content active">
             <div class="academic-card">
                 <h3>My Current Status</h3>
@@ -36,7 +74,7 @@
             </div>
         </div>
 
-        <div id="book" class="section-content">
+        <div id="book" class="section-content" style="display: none;">
             <div class="academic-card">
                 <h3>Connect with Faculty</h3>
                 <select id="teacherSelect"></select>
@@ -45,18 +83,14 @@
             </div>
         </div>
 
-        <div id="material" class="section-content">
-            <div class="academic-card">
-                <h3>📅 Today's Class Schedule</h3>
-                <div id="timetableInbox">Loading timetable...</div>
-            </div>
+        <div id="material" class="section-content" style="display: none;">
             <div class="academic-card">
                 <h3>📚 Study Materials & Notes</h3>
                 <div id="notesInbox">Loading notes...</div>
             </div>
         </div>
 
-        <div style="text-align: center; padding-bottom: 20px;">
+        <div style="text-align: center; padding: 20px 0;">
             <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
     </div>
@@ -68,15 +102,15 @@
         if (!user) window.location.href = "login.html";
         document.getElementById("welcomeText").innerText = `Welcome, ${user.name}`;
 
+        // Unified Tab Switching Logic
         function showTab(tabId) {
-            document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            event.target.classList.add('active');
+            document.querySelectorAll('.section-content').forEach(s => s.style.display = 'none');
+            document.getElementById(tabId).style.display = 'block';
             
             if (tabId === 'material') loadMaterial();
             if (tabId === 'academics') loadERPData();
-            if (tabId === 'book') loadFaculty();
+            if (tabId === 'timetable') loadDetailedTimetable();
+            if (tabId === 'book' || !document.getElementById("teacherSelect").innerHTML) loadFaculty();
         }
 
         async function loadERPData() {
@@ -87,31 +121,51 @@
                 const att = me.attendance || 0;
                 document.getElementById("myAttVal").innerText = att;
                 document.getElementById("myST1").innerText = me.marks?.st1 || 0;
-                document.getElementById("barVisual").style.width = att + "%";
-                document.getElementById("barVisual").innerText = att + "%";
-                document.getElementById("barVisual").style.background = att < 75 ? "red" : "green";
+                document.getElementById("myST2").innerText = me.marks?.st2 || 0;
+                const bar = document.getElementById("barVisual");
+                bar.style.width = att + "%";
+                bar.innerText = att + "%";
+                bar.style.background = att < 75 ? "red" : "green";
             }
+        }
+
+        // Detailed Timetable Function (Based on your Screenshots)
+        async function loadDetailedTimetable() {
+            const res = await fetch(`${API_URL}/notes`);
+            const data = await res.json();
+            const ttDiv = document.getElementById("detailedTimetable");
+            
+            const schedule = data.filter(item => item.category === 'timetable');
+            
+            ttDiv.innerHTML = schedule.map((cls, index) => `
+                <div class="period-card" style="border-left-color: ${index === 1 ? 'red' : '#28a745'}">
+                    <div>
+                        <strong style="color: #333;">Period ${index + 1} (LH6)</strong> <br>
+                        <span style="font-size: 13px; color: #666;">${cls.subject}</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="status-badge" style="background: ${index === 1 ? 'red' : '#007bff'}">
+                            ${index === 1 ? 'LIVE' : 'Upcoming'}
+                        </span> <br>
+                        <small style="color: #888;">Prof. ${cls.teacherName}</small>
+                    </div>
+                </div>
+            `).join('') || "<p>No classes scheduled today.</p>";
         }
 
         async function loadMaterial() {
             const res = await fetch(`${API_URL}/notes`);
             const data = await res.json();
             const noteDiv = document.getElementById("notesInbox");
-            const ttDiv = document.getElementById("timetableInbox");
+            const notes = data.filter(item => item.category === 'note');
             
-            noteDiv.innerHTML = ""; ttDiv.innerHTML = "";
-            
-            data.forEach(item => {
-                const html = `
-                    <div class="inbox-item" style="border-left: 5px solid ${item.category === 'timetable' ? '#ffcc00' : '#8b0000'}; margin-bottom:10px; padding:10px; background:#f9f9f9; border-radius:5px;">
-                        <strong>${item.subject}</strong> <br>
-                        <small>${item.category === 'timetable' ? '📍 Class: ' + item.link : '🔗 Link: <a href="'+item.link+'" target="_blank">View Note</a>'}</small>
-                        <br><small>Prof. ${item.teacherName}</small>
-                    </div>`;
-                
-                if(item.category === 'timetable') ttDiv.innerHTML += html;
-                else noteDiv.innerHTML += html;
-            });
+            noteDiv.innerHTML = notes.map(item => `
+                <div class="inbox-item" style="border-left: 5px solid #8b0000; margin-bottom:10px; padding:10px; background:#f9f9f9; border-radius:5px;">
+                    <strong>${item.subject}</strong> <br>
+                    <small>🔗 Link: <a href="${item.link}" target="_blank">View Note</a></small>
+                    <br><small>Prof. ${item.teacherName}</small>
+                </div>
+            `).join('') || "<p>No notes available.</p>";
         }
 
         async function loadFaculty() {
@@ -123,6 +177,7 @@
         async function sendRequest() {
             const tId = document.getElementById("teacherSelect").value;
             const msg = document.getElementById("msg").value;
+            if(!msg) return alert("Please enter a reason!");
             await fetch(`${API_URL}/send-request`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

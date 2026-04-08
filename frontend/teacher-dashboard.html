@@ -4,19 +4,45 @@
     <meta charset="UTF-8">
     <title>Teacher Dashboard | ERP Portal</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Container and UI consistency */
+        .container { max-width: 1100px !important; width: 95%; margin: 20px auto; }
+        .cuims-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+        .grid-item { 
+            background: white; padding: 15px; border-radius: 12px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; 
+            transition: 0.3s; text-align: center;
+        }
+        .grid-item:hover { transform: translateY(-5px); }
+        .grid-item p { font-size: 12px; font-weight: bold; color: #8b0000; margin-top: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        input[type="number"] { width: 60px; padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
+        .status-badge { padding: 4px 10px; border-radius: 4px; color: white; font-weight: bold; font-size: 12px; }
+    </style>
 </head>
 <body>
-    <div class="container" style="max-width: 1100px;">
-        <h2>Welcome, Prof. <span id="tName"></span></h2>
+    <div class="container">
+        <h2 style="text-align: center;">Welcome, Prof. <span id="tName"></span></h2>
         
-        <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('attendance')">📋 Attendance & Marks</button>
-            <button class="tab-btn" onclick="showTab('appointments')">📩 Appointments Inbox</button>
-            <button class="tab-btn" onclick="showTab('material')">📚 Notes & Timetable</button>
+        <div class="cuims-grid">
+            <div class="grid-item" onclick="showTab('attendance')">
+                <img src="https://cdn-icons-png.flaticon.com/512/3589/3589030.png" width="40">
+                <p>Manage Records</p>
+            </div>
+            <div class="grid-item" onclick="showTab('appointments')">
+                <img src="https://cdn-icons-png.flaticon.com/512/942/942799.png" width="40">
+                <p>Appointments</p>
+            </div>
+            <div class="grid-item" onclick="showTab('material')">
+                <img src="https://cdn-icons-png.flaticon.com/512/2436/2436636.png" width="40">
+                <p>Upload Center</p>
+            </div>
         </div>
 
         <div id="attendance" class="section-content active">
-            <div class="card">
+            <div class="academic-card">
                 <h3>Update Student Records</h3>
                 <table>
                     <thead><tr><th>Name</th><th>Roll No</th><th>Attendance %</th><th>ST1</th><th>Action</th></tr></thead>
@@ -25,53 +51,113 @@
             </div>
         </div>
 
-        <div id="appointments" class="section-content">
-            <div class="card">
-                <h3>Meeting Requests</h3>
+        <div id="appointments" class="section-content" style="display: none;">
+            <div class="academic-card">
+                <h3>📩 Meeting Requests</h3>
                 <div id="requestList">Loading requests...</div>
             </div>
         </div>
 
-        <div id="material" class="section-content">
-            <div class="card">
+        <div id="material" class="section-content" style="display: none;">
+            <div class="academic-card">
                 <h3>Update Availability</h3>
-                <select id="statusSelect" onchange="updateAvailability()">
+                <select id="statusSelect" onchange="updateAvailability()" style="width: 100%; padding: 10px; margin-bottom: 15px;">
                     <option value="Available">Available</option>
                     <option value="Busy">Busy (In Class)</option>
                     <option value="Away">Away</option>
                 </select>
             </div>
 
-            <div class="card" style="border-top: 4px solid #28a745;">
-                <h3>📚 Upload Notes / Assignment</h3>
-                <input type="text" id="subjectNote" placeholder="Subject Name (e.g. MongoDB Unit 1)">
+            <div class="academic-card" style="border-top: 4px solid #28a745;">
+                <h3>📚 Upload Notes</h3>
+                <input type="text" id="subjectNote" placeholder="Subject Name (e.g. Node.js Unit 2)">
                 <input type="text" id="noteLink" placeholder="Google Drive Link">
-                <button onclick="uploadMaterial('note')" style="background: #28a745;">Share Note</button>
+                <button class="btn-primary" onclick="uploadMaterial('note')" style="background: #28a745; width: 100%;">Share Note</button>
             </div>
 
-            <div class="card" style="border-top: 4px solid #ffcc00;">
+            <div class="academic-card" style="border-top: 4px solid #ffcc00; margin-top: 20px;">
                 <h3>📅 Schedule Class (Timetable)</h3>
                 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <input type="text" id="ttClass" placeholder="Class (e.g. BCA 6th Sem)" style="flex:1;">
+                    <input type="text" id="ttClass" placeholder="Room (e.g. LH6)" style="flex:1;">
                     <input type="time" id="ttTime" style="flex:1;">
                 </div>
-                <input type="text" id="ttSubject" placeholder="Subject/Topic Name">
-                <button onclick="uploadMaterial('timetable')" style="background: #8b0000;">Post to Timetable</button>
+                <input type="text" id="ttSubject" placeholder="Subject Name">
+                <button class="btn-primary" onclick="uploadMaterial('timetable')" style="background: #8b0000; width: 100%;">Post to Timetable</button>
             </div>
         </div>
 
-        <button onclick="logout()" style="background: #555; margin: 20px;">Logout</button>
+        <div style="text-align: center; padding: 20px;">
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
     </div>
 
     <script>
         const user = JSON.parse(localStorage.getItem("user"));
         const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
 
+        if (!user) window.location.href = "login.html";
+
         function showTab(tabId) {
-            document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            event.target.classList.add('active');
+            document.querySelectorAll('.section-content').forEach(s => s.style.display = 'none');
+            document.getElementById(tabId).style.display = 'block';
+        }
+
+        async function loadTeacherData() {
+            document.getElementById("tName").innerText = user.name;
+            
+            // Load Students for table
+            const resS = await fetch(`${API_URL}/students`);
+            const students = await resS.json();
+            document.getElementById("studentBody").innerHTML = students.map(s => `
+                <tr>
+                    <td>${s.name}</td>
+                    <td>${s.rollNo || '2310...'}</td>
+                    <td><input type="number" id="att-${s._id}" value="${s.attendance || 0}"></td>
+                    <td><input type="number" id="st1-${s._id}" value="${s.marks?.st1 || 0}"></td>
+                    <td><button class="btn-primary" style="padding: 5px 10px;" onclick="saveAcademics('${s._id}')">Save</button></td>
+                </tr>
+            `).join('');
+
+            // Load Appointments
+            const resT = await fetch(`${API_URL}/teachers`);
+            const teachers = await resT.json();
+            const me = teachers.find(t => t._id === user._id);
+            
+            document.getElementById("requestList").innerHTML = me.notifications.reverse().map(n => `
+                <div class="inbox-item" style="border-left: 5px solid ${n.status === 'pending' ? '#8b0000' : '#28a745'}; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                    <p><strong>From:</strong> ${n.studentName}</p>
+                    <p><strong>Reason:</strong> ${n.message}</p>
+                    <p><strong>Status:</strong> <span style="color: ${n.status === 'Approved' ? 'green' : 'red'}; font-weight: bold;">${n.status.toUpperCase()}</span></p>
+                    ${n.status === 'pending' ? `
+                        <div style="margin-top: 10px;">
+                            <button onclick="respond('${n.studentId}', '${n.id}', 'Approved')" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Approve & Send Email</button>
+                            <button onclick="respond('${n.studentId}', '${n.id}', 'Declined')" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-left: 5px;">Decline</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('') || "<p>No meeting requests found.</p>";
+        }
+
+        // Updated Respond Function with Email Trigger logic
+        async function respond(sId, nId, status) {
+            const res = await fetch(`${API_URL}/update-status`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    teacherId: user._id, 
+                    studentId: sId, 
+                    notificationId: nId, 
+                    newStatus: status 
+                })
+            });
+            
+            const result = await res.json();
+            if(result.success) {
+                alert(`Appointment ${status}! Notification email sent to student.`);
+                loadTeacherData(); // Refresh UI
+            } else {
+                alert("Status updated, but failed to send email.");
+            }
         }
 
         async function uploadMaterial(type) {
@@ -83,54 +169,25 @@
                     category: 'note'
                 };
             } else {
-                const className = document.getElementById("ttClass").value;
+                const room = document.getElementById("ttClass").value;
                 const time = document.getElementById("ttTime").value;
                 const sub = document.getElementById("ttSubject").value;
                 data = {
-                    subject: `${sub} @ ${time}`,
-                    link: className, // Storing Class Name in Link field for filtering
+                    subject: sub,
+                    link: `${room} @ ${time}`,
                     category: 'timetable'
                 };
             }
 
-            if(!data.subject || !data.link) return alert("Please fill all fields!");
+            if(!data.subject || !data.link) return alert("Fill all fields!");
 
             await fetch(`${API_URL}/notes`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ...data, teacherName: user.name })
             });
-            alert("Uploaded successfully!");
-            location.reload();
-        }
-
-        async function loadTeacherData() {
-            document.getElementById("tName").innerText = user.name;
-            const resS = await fetch(`${API_URL}/students`);
-            const students = await resS.json();
-            document.getElementById("studentBody").innerHTML = students.map(s => `
-                <tr>
-                    <td>${s.name}</td>
-                    <td>${s.rollNo || 'N/A'}</td>
-                    <td><input type="number" id="att-${s._id}" value="${s.attendance || 0}"></td>
-                    <td><input type="number" id="st1-${s._id}" value="${s.marks?.st1 || 0}"></td>
-                    <td><button onclick="saveAcademics('${s._id}')">Save</button></td>
-                </tr>
-            `).join('');
-
-            const resT = await fetch(`${API_URL}/teachers`);
-            const teachers = await resT.json();
-            const me = teachers.find(t => t._id === user._id);
-            document.getElementById("requestList").innerHTML = me.notifications.reverse().map(n => `
-                <div class="card" style="border-left: 5px solid #8b0000;">
-                    <p><strong>From:</strong> ${n.studentName}</p>
-                    <p><strong>Message:</strong> ${n.message}</p>
-                    ${n.status === 'pending' ? `
-                        <button onclick="respond('${n.studentId}', '${n.id}', 'Approved')" style="background: green;">Approve</button>
-                        <button onclick="respond('${n.studentId}', '${n.id}', 'Declined')" style="background: red;">Decline</button>
-                    ` : `<span class="status-badge">${n.status}</span>`}
-                </div>
-            `).join('') || "No requests.";
+            alert("Posted successfully!");
+            showTab('material');
         }
 
         async function saveAcademics(sId) {
@@ -144,7 +201,7 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data)
             });
-            alert("Updated!");
+            alert("Data Saved!");
         }
 
         function logout() { localStorage.clear(); window.location.href="role.html"; }
