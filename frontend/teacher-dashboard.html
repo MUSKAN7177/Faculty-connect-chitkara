@@ -7,19 +7,21 @@
     <style>
         /* Container and UI consistency */
         .container { max-width: 1100px !important; width: 95%; margin: 20px auto; }
-        .cuims-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+        /* Updated grid to 4 columns to accommodate new Availability section */
+        .cuims-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
         .grid-item { 
             background: white; padding: 15px; border-radius: 12px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; 
             transition: 0.3s; text-align: center;
         }
         .grid-item:hover { transform: translateY(-5px); }
-        .grid-item p { font-size: 12px; font-weight: bold; color: #8b0000; margin-top: 5px; }
+        .grid-item p { font-size: 11px; font-weight: bold; color: #8b0000; margin-top: 5px; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        input[type="number"] { width: 60px; padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
+        input[type="number"], input[type="time"], select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; }
         .status-badge { padding: 4px 10px; border-radius: 4px; color: white; font-weight: bold; font-size: 12px; }
+        .schedule-chip { background: #e9ecef; padding: 5px 10px; border-radius: 20px; font-size: 12px; margin: 5px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -28,15 +30,19 @@
         
         <div class="cuims-grid">
             <div class="grid-item" onclick="showTab('attendance')">
-                <img src="https://cdn-icons-png.flaticon.com/512/3589/3589030.png" width="40">
+                <img src="https://cdn-icons-png.flaticon.com/512/3589/3589030.png" width="35">
                 <p>Manage Records</p>
             </div>
             <div class="grid-item" onclick="showTab('appointments')">
-                <img src="https://cdn-icons-png.flaticon.com/512/942/942799.png" width="40">
+                <img src="https://cdn-icons-png.flaticon.com/512/942/942799.png" width="35">
                 <p>Appointments</p>
             </div>
+            <div class="grid-item" onclick="showTab('availability-status')">
+                <img src="https://cdn-icons-png.flaticon.com/512/3079/3079165.png" width="35">
+                <p>My Status</p>
+            </div>
             <div class="grid-item" onclick="showTab('material')">
-                <img src="https://cdn-icons-png.flaticon.com/512/2436/2436636.png" width="40">
+                <img src="https://cdn-icons-png.flaticon.com/512/2436/2436636.png" width="35">
                 <p>Upload Center</p>
             </div>
         </div>
@@ -58,16 +64,31 @@
             </div>
         </div>
 
-        <div id="material" class="section-content" style="display: none;">
-            <div class="academic-card">
-                <h3>Update Availability</h3>
-                <select id="statusSelect" onchange="updateAvailability()" style="width: 100%; padding: 10px; margin-bottom: 15px;">
-                    <option value="Available">Available</option>
-                    <option value="Busy">Busy (In Class)</option>
-                    <option value="Away">Away</option>
+        <div id="availability-status" class="section-content" style="display: none;">
+            <div class="academic-card" style="border-left: 5px solid #007bff;">
+                <h3>⚙️ Live Availability</h3>
+                <p>Set your current status for students:</p>
+                <select id="statusSelect" onchange="updateLiveStatus()" style="width: 100%; margin-top: 10px;">
+                    <option value="Available">🟢 Available</option>
+                    <option value="Busy">🔴 Busy (In Class)</option>
+                    <option value="Away">🟡 Away</option>
                 </select>
             </div>
 
+            <div class="academic-card" style="margin-top: 20px; border-left: 5px solid #ffc107;">
+                <h3>📅 My Personal Timetable</h3>
+                <p style="font-size: 13px; color: #666;">Add your daily class schedule to show auto-busy status.</p>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <input type="time" id="myStartTime" style="flex:1;">
+                    <input type="time" id="myEndTime" style="flex:1;">
+                    <button onclick="addSchedule()" style="background: #28a745; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">Add Slot</button>
+                </div>
+                <div id="scheduleList" style="margin-top: 15px;"></div>
+                <button onclick="saveTimetableToDB()" class="btn-primary" style="width: 100%; margin-top: 10px; background: #8b0000;">Save Full Schedule</button>
+            </div>
+        </div>
+
+        <div id="material" class="section-content" style="display: none;">
             <div class="academic-card" style="border-top: 4px solid #28a745;">
                 <h3>📚 Upload Notes</h3>
                 <input type="text" id="subjectNote" placeholder="Subject Name (e.g. Node.js Unit 2)">
@@ -76,7 +97,7 @@
             </div>
 
             <div class="academic-card" style="border-top: 4px solid #ffcc00; margin-top: 20px;">
-                <h3>📅 Schedule Class (Timetable)</h3>
+                <h3>📅 Schedule Class (Student Timetable)</h3>
                 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                     <input type="text" id="ttClass" placeholder="Room (e.g. LH6)" style="flex:1;">
                     <input type="time" id="ttTime" style="flex:1;">
@@ -94,6 +115,7 @@
     <script>
         const user = JSON.parse(localStorage.getItem("user"));
         const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
+        let personalSchedule = [];
 
         if (!user) window.location.href = "login.html";
 
@@ -105,7 +127,7 @@
         async function loadTeacherData() {
             document.getElementById("tName").innerText = user.name;
             
-            // Load Students for table
+            // Load Students
             const resS = await fetch(`${API_URL}/students`);
             const students = await resS.json();
             document.getElementById("studentBody").innerHTML = students.map(s => `
@@ -118,76 +140,101 @@
                 </tr>
             `).join('');
 
-            // Load Appointments
+            // Load Notifications & Availability
             const resT = await fetch(`${API_URL}/teachers`);
             const teachers = await resT.json();
             const me = teachers.find(t => t._id === user._id);
             
-            document.getElementById("requestList").innerHTML = me.notifications.reverse().map(n => `
-                <div class="inbox-item" style="border-left: 5px solid ${n.status === 'pending' ? '#8b0000' : '#28a745'}; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-                    <p><strong>From:</strong> ${n.studentName}</p>
-                    <p><strong>Reason:</strong> ${n.message}</p>
-                    <p><strong>Status:</strong> <span style="color: ${n.status === 'Approved' ? 'green' : 'red'}; font-weight: bold;">${n.status.toUpperCase()}</span></p>
-                    ${n.status === 'pending' ? `
-                        <div style="margin-top: 10px;">
-                            <button onclick="respond('${n.studentId}', '${n.id}', 'Approved')" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Approve & Send Email</button>
-                            <button onclick="respond('${n.studentId}', '${n.id}', 'Declined')" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-left: 5px;">Decline</button>
-                        </div>
-                    ` : ''}
-                </div>
-            `).join('') || "<p>No meeting requests found.</p>";
+            if (me) {
+                document.getElementById("statusSelect").value = me.status || "Available";
+                personalSchedule = me.ownTimetable || [];
+                renderScheduleUI();
+                
+                document.getElementById("requestList").innerHTML = me.notifications.reverse().map(n => `
+                    <div class="inbox-item" style="border-left: 5px solid ${n.status === 'pending' ? '#8b0000' : '#28a745'}; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <p><strong>From:</strong> ${n.studentName}</p>
+                        <p><strong>Reason:</strong> ${n.message}</p>
+                        <p><strong>Status:</strong> <span style="color: ${n.status === 'Approved' ? 'green' : 'red'}; font-weight: bold;">${n.status.toUpperCase()}</span></p>
+                        ${n.status === 'pending' ? `
+                            <div style="margin-top: 10px;">
+                                <button onclick="respond('${n.studentId}', '${n.id}', 'Approved')" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Approve & Send Email</button>
+                                <button onclick="respond('${n.studentId}', '${n.id}', 'Declined')" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-left: 5px;">Decline</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('') || "<p>No meeting requests found.</p>";
+            }
         }
 
-        // Updated Respond Function with Email Trigger logic
+        // --- NEW AVAILABILITY FUNCTIONS ---
+        async function updateLiveStatus() {
+            const newStatus = document.getElementById("statusSelect").value;
+            await fetch(`${API_URL}/teacher/update-live-status`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ teacherId: user._id, status: newStatus })
+            });
+            alert("Status Updated to " + newStatus);
+        }
+
+        function addSchedule() {
+            const start = document.getElementById("myStartTime").value;
+            const end = document.getElementById("myEndTime").value;
+            if(!start || !end) return alert("Select time!");
+            personalSchedule.push({ start, end });
+            renderScheduleUI();
+        }
+
+        function renderScheduleUI() {
+            document.getElementById("scheduleList").innerHTML = personalSchedule.map((s, idx) => `
+                <div class="schedule-chip">
+                    ${s.start} - ${s.end} 
+                    <span style="color:red; cursor:pointer; margin-left:5px;" onclick="personalSchedule.splice(${idx},1); renderScheduleUI();">×</span>
+                </div>
+            `).join('');
+        }
+
+        async function saveTimetableToDB() {
+            const res = await fetch(`${API_URL}/teacher/timetable`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ teacherId: user._id, schedule: personalSchedule })
+            });
+            if(res.ok) alert("Personal Timetable Saved!");
+        }
+        // ----------------------------------
+
         async function respond(sId, nId, status) {
             const res = await fetch(`${API_URL}/update-status`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    teacherId: user._id, 
-                    studentId: sId, 
-                    notificationId: nId, 
-                    newStatus: status 
-                })
+                body: JSON.stringify({ teacherId: user._id, studentId: sId, notificationId: nId, newStatus: status })
             });
-            
             const result = await res.json();
             if(result.success) {
-                alert(`Appointment ${status}! Notification email sent to student.`);
-                loadTeacherData(); // Refresh UI
-            } else {
-                alert("Status updated, but failed to send email.");
+                alert(`Appointment ${status}! Email sent.`);
+                loadTeacherData();
             }
         }
 
         async function uploadMaterial(type) {
-            let data = {};
+            let data = { teacherName: user.name };
             if(type === 'note') {
-                data = {
-                    subject: document.getElementById("subjectNote").value,
-                    link: document.getElementById("noteLink").value,
-                    category: 'note'
-                };
+                data.subject = document.getElementById("subjectNote").value;
+                data.link = document.getElementById("noteLink").value;
+                data.category = 'note';
             } else {
-                const room = document.getElementById("ttClass").value;
-                const time = document.getElementById("ttTime").value;
-                const sub = document.getElementById("ttSubject").value;
-                data = {
-                    subject: sub,
-                    link: `${room} @ ${time}`,
-                    category: 'timetable'
-                };
+                data.subject = document.getElementById("ttSubject").value;
+                data.link = `${document.getElementById("ttClass").value} @ ${document.getElementById("ttTime").value}`;
+                data.category = 'timetable';
             }
-
             if(!data.subject || !data.link) return alert("Fill all fields!");
-
             await fetch(`${API_URL}/notes`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...data, teacherName: user.name })
+                body: JSON.stringify(data)
             });
-            alert("Posted successfully!");
-            showTab('material');
+            alert("Posted!");
         }
 
         async function saveAcademics(sId) {

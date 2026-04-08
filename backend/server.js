@@ -1,7 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const nodemailer = require("nodemailer"); // 👈 Added Nodemailer
+const nodemailer = require("nodemailer");
 require('dotenv').config(); 
 
 const app = express();
@@ -27,16 +27,17 @@ mongoose.connect(dbURI)
     .then(() => console.log("✅ MongoDB Atlas Connected"))
     .catch(err => console.log("❌ DB Connection Error:", err));
 
-// 📝 SCHEMAS
+// 📝 SCHEMAS (Updated with Availability & Branch)
 const TeacherSchema = new mongoose.Schema({
     name: String, 
     universityId: String, 
     email: String, 
     password: String, 
-    department: String,
-    subjects: [String],
+    department: String, // e.g., BCA, MCA
+    semester: [String],  // Teachers can teach multiple semesters e.g. ["1st", "6th"]
     status: { type: String, default: "Available" },
-    notifications: { type: Array, default: [] }
+    notifications: { type: Array, default: [] },
+    ownTimetable: { type: Array, default: [] } // Array of {start: "HH:MM", end: "HH:MM"}
 });
 
 const StudentSchema = new mongoose.Schema({
@@ -44,7 +45,8 @@ const StudentSchema = new mongoose.Schema({
     rollNo: String, 
     email: String, 
     password: String, 
-    department: String,
+    department: String, // BCA/MCA
+    semester: String,   // 6th
     attendance: { type: Number, default: 0 },
     marks: {
         st1: { type: Number, default: 0 },
@@ -56,8 +58,8 @@ const NotesSchema = new mongoose.Schema({
     subject: String,
     teacherName: String,
     link: String,
-    category: { type: String, default: 'note' }, // 'note' or 'timetable'
-    date: { type: Date, default: Date.now } // 👈 Fixed comma here
+    category: { type: String, default: 'note' }, 
+    date: { type: Date, default: Date.now }
 });
 
 const Teacher = mongoose.model("Teacher", TeacherSchema);
@@ -85,28 +87,55 @@ app.post("/login", async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, msg: "Server Error" }); }
 });
 
-// 📊 ACADEMIC ROUTES
-app.get("/students", async (req, res) => {
+// 📊 ACADEMIC & FILTERING ROUTES
+// Route to get ONLY teachers from student's own branch & semester
+app.get("/teachers/filter", async (req, res) => {
+    const { dept, sem } = req.query;
     try {
-        const students = await Student.find({}, { password: 0 });
-        res.json(students);
-    } catch (err) { res.status(500).json({ msg: "Error fetching students" }); }
+        const teachers = await Teacher.find({ 
+            department: dept, 
+            semester: { $in: [sem] } // Filters teachers teaching that semester
+        }, { password: 0 });
+        res.json(teachers);
+    } catch (err) { res.status(500).json([]); }
 });
 
 app.post("/update-academics", async (req, res) => {
     try {
         const { studentId, attendance, marks } = req.body;
+        const student = await Student.findById(studentId);
+        
         await Student.findByIdAndUpdate(studentId, { attendance, marks });
+
+        // 🚨 Automatic Low Attendance Email
+        if (Number(attendance) < 75) {
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: student.email,
+                subject: "⚠️ Low Attendance Alert: Faculty Connect",
+                text: `Hi ${student.name}, your attendance is ${attendance}%. It must be above 75%.`
+            };
+            await transporter.sendMail(mailOptions);
+        }
         res.json({ success: true, msg: "Records updated!" });
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
-// 📚 NOTES & TIMETABLE ROUTES
-app.post("/notes", async (req, res) => { // Unified route for Teacher Dashboard
+// 📚 NOTES & TEACHER TIMETABLE
+app.post("/notes", async (req, res) => {
     try {
         const newNote = new Notes(req.body);
-        await newNote.save();
+        await newUser.save();
         res.json({ success: true, msg: "Shared Successfully!" });
+    } catch (err) { res.status(500).json({ success: false }); }
+});
+
+// New Route for Teacher to upload their own Schedule
+app.post("/teacher/timetable", async (req, res) => {
+    try {
+        const { teacherId, schedule } = req.body; // schedule is array of {start, end}
+        await Teacher.findByIdAndUpdate(teacherId, { ownTimetable: schedule });
+        res.json({ success: true, msg: "Schedule Updated!" });
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
@@ -117,10 +146,28 @@ app.get("/notes", async (req, res) => {
     } catch (err) { res.status(500).json([]); }
 });
 
-// 🏫 FACULTY & APPOINTMENTS
-app.get("/teachers", async (req, res) => {
-    const teachers = await Teacher.find({}, { password: 0 });
-    res.json(teachers);
+// 🏫 FACULTY STATUS & APPOINTMENTS
+app.post("/update-status", async (req, res) => {
+    const { teacherId, studentId, notificationId, newStatus } = req.body;
+    try {
+        await Teacher.updateOne(
+            { _id: teacherId, "notifications.id": Number(notificationId) },
+            { $set: { "notifications.$.status": newStatus } }
+        );
+
+        const student = await Student.findById(studentId);
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: student.email,
+            subject: `Appointment Update: ${newStatus}`,
+            text: `Hello ${student.name}, your appointment request has been ${newStatus}.`
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ success: true, message: "Email Sent!" });
+    } catch (err) {
+        res.status(500).json({ success: false });
+    }
 });
 
 app.post("/send-request", async (req, res) => {
@@ -131,34 +178,6 @@ app.post("/send-request", async (req, res) => {
         });
         res.json({ success: true, msg: "Request Sent!" });
     } catch (err) { res.status(500).json({ success: false }); }
-});
-
-app.post("/update-status", async (req, res) => {
-    const { teacherId, studentId, notificationId, newStatus } = req.body;
-    try {
-        // 1. Update Teacher Notification
-        await Teacher.updateOne(
-            { _id: teacherId, "notifications.id": Number(notificationId) },
-            { $set: { "notifications.$.status": newStatus } }
-        );
-
-        // 2. Fetch Student Email
-        const student = await Student.findById(studentId);
-        
-        // 3. Send Email using Transporter
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: student.email,
-            subject: `Appointment Update: ${newStatus}`,
-            text: `Hello ${student.name}, your appointment request has been ${newStatus}. Check your portal for details.`
-        };
-
-        await transporter.sendMail(mailOptions);
-        res.json({ success: true, message: "Status updated and email sent!" });
-    } catch (err) {
-        console.error("Email Error:", err);
-        res.status(500).json({ success: false, error: "Status updated, but email failed." });
-    }
 });
 
 // 🚀 SERVER

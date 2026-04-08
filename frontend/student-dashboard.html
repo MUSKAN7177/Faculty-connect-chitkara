@@ -9,20 +9,20 @@
         .container { max-width: 1100px !important; width: 95%; margin: 20px auto; }
         
         /* CUIMS Grid Styling */
-        .cuims-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+        .cuims-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
         .grid-item { 
             background: white; padding: 15px; border-radius: 12px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; 
             transition: 0.3s; text-align: center;
         }
         .grid-item:hover { transform: translateY(-5px); }
-        .grid-item p { font-size: 12px; font-weight: bold; color: #8b0000; margin-top: 5px; }
+        .grid-item p { font-size: 11px; font-weight: bold; color: #8b0000; margin-top: 5px; }
 
-        /* Timetable Period Styling */
+        /* Timetable & Faculty Card Styling */
         .period-card {
             border-left: 5px solid #28a745; background: #f8f9fa; 
             padding: 15px; margin-bottom: 10px; display: flex; 
-            justify-content: space-between; border-radius: 0 8px 8px 0;
+            justify-content: space-between; align-items: center; border-radius: 0 8px 8px 0;
         }
         .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; color: white; }
     </style>
@@ -33,16 +33,20 @@
         
         <div class="cuims-grid">
             <div class="grid-item" onclick="showTab('academics')">
-                <img src="https://cdn-icons-png.flaticon.com/512/3589/3589030.png" width="40">
+                <img src="https://cdn-icons-png.flaticon.com/512/3589/3589030.png" width="35">
                 <p>Attendance</p>
             </div>
             <div class="grid-item" onclick="showTab('material')">
-                <img src="https://cdn-icons-png.flaticon.com/512/2436/2436636.png" width="40">
+                <img src="https://cdn-icons-png.flaticon.com/512/2436/2436636.png" width="35">
                 <p>Resources</p>
             </div>
             <div class="grid-item" onclick="showTab('timetable')">
-                <img src="https://cdn-icons-png.flaticon.com/512/3652/3652191.png" width="40">
+                <img src="https://cdn-icons-png.flaticon.com/512/3652/3652191.png" width="35">
                 <p>Time Table</p>
+            </div>
+            <div class="grid-item" onclick="showTab('availability')">
+                <img src="https://cdn-icons-png.flaticon.com/512/3079/3079165.png" width="35">
+                <p>Availability</p>
             </div>
         </div>
 
@@ -74,6 +78,14 @@
             </div>
         </div>
 
+        <div id="availability" class="section-content" style="display: none;">
+            <div class="academic-card">
+                <h3>🔍 Faculty Availability</h3>
+                <p id="branchInfo" style="font-size: 12px; color: #666; margin-bottom: 15px;"></p>
+                <div id="filteredTeacherList">Loading Teachers...</div>
+            </div>
+        </div>
+
         <div id="book" class="section-content" style="display: none;">
             <div class="academic-card">
                 <h3>Connect with Faculty</h3>
@@ -101,8 +113,8 @@
 
         if (!user) window.location.href = "login.html";
         document.getElementById("welcomeText").innerText = `Welcome, ${user.name}`;
+        document.getElementById("branchInfo").innerText = `Branch: ${user.department} | Semester: ${user.semester}`;
 
-        // Unified Tab Switching Logic
         function showTab(tabId) {
             document.querySelectorAll('.section-content').forEach(s => s.style.display = 'none');
             document.getElementById(tabId).style.display = 'block';
@@ -110,6 +122,7 @@
             if (tabId === 'material') loadMaterial();
             if (tabId === 'academics') loadERPData();
             if (tabId === 'timetable') loadDetailedTimetable();
+            if (tabId === 'availability') loadFilteredFaculty();
             if (tabId === 'book' || !document.getElementById("teacherSelect").innerHTML) loadFaculty();
         }
 
@@ -129,12 +142,38 @@
             }
         }
 
-        // Detailed Timetable Function (Based on your Screenshots)
+        async function loadFilteredFaculty() {
+            try {
+                // Fetching only teachers from same branch/semester
+                const res = await fetch(`${API_URL}/teachers/filter?dept=${user.department}&sem=${user.semester}`);
+                const teachers = await res.json();
+                const listDiv = document.getElementById("filteredTeacherList");
+                
+                listDiv.innerHTML = teachers.map(t => `
+                    <div class="period-card" style="border-left-color: ${t.status === 'Available' ? '#28a745' : '#dc3545'}">
+                        <div>
+                            <strong>${t.name}</strong> <br>
+                            <span class="status-badge" style="background: ${t.status === 'Available' ? '#28a745' : '#dc3545'}">
+                                ${t.status}
+                            </span>
+                        </div>
+                        <button class="btn-primary" onclick="openBookingTab('${t._id}')" style="width: auto; padding: 5px 12px; font-size: 11px;">
+                            Book
+                        </button>
+                    </div>
+                `).join('') || "<p>No faculty found for your branch.</p>";
+            } catch (err) { console.error(err); }
+        }
+
+        function openBookingTab(tId) {
+            showTab('book');
+            document.getElementById("teacherSelect").value = tId;
+        }
+
         async function loadDetailedTimetable() {
             const res = await fetch(`${API_URL}/notes`);
             const data = await res.json();
             const ttDiv = document.getElementById("detailedTimetable");
-            
             const schedule = data.filter(item => item.category === 'timetable');
             
             ttDiv.innerHTML = schedule.map((cls, index) => `

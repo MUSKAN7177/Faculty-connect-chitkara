@@ -10,21 +10,77 @@
         <h2>Create Account</h2>
         <form id="signupForm">
             <input type="text" id="name" placeholder="Full Name" required>
-            <input type="text" id="rollNo" placeholder="Roll Number (Students only)">
-            <input type="text" id="idField" placeholder="University/Faculty ID" required>
+            
+            <div id="roleSpecificFields">
+                <input type="text" id="rollNo" placeholder="Roll Number (e.g. 211099...)">
+                <input type="text" id="idField" placeholder="University ID (for Teachers)">
+            </div>
+
             <input type="email" id="email" placeholder="Email (e.g. name@chitkara.edu.in)" required>
             
-            <select id="department">
-                <option value="BCA">BCA</option>
-                <option value="CSE">CSE</option>
-                <option value="Other">Other</option>
-            </select>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <select id="department" style="flex: 1;">
+                    <option value="BCA">BCA</option>
+                    <option value="CSE">CSE</option>
+                    <option value="MCA">MCA</option>
+                </select>
+
+                <select id="semester" style="flex: 1;">
+                    <option value="1st">1st Sem</option>
+                    <option value="2nd">2nd Sem</option>
+                    <option value="3rd">3rd Sem</option>
+                    <option value="4th">4th Sem</option>
+                    <option value="5th">5th Sem</option>
+                    <option value="6th">6th Sem</option>
+                </select>
+            </div>
 
             <input type="password" id="password" placeholder="Create Password" required>
             <button type="submit" onclick="handleSignup(event)">Register Now</button>
         </form>
         <p>Already have an account? <a href="login.html">Login here</a></p>
     </div>
-    <script src="app.js"></script>
+
+    <script>
+        // Check role from role.html selection
+        const selectedRole = localStorage.getItem("selectedRole") || "student";
+        
+        // Hide/Show fields based on role
+        if(selectedRole === "teacher") {
+            document.getElementById("rollNo").style.display = "none";
+            document.getElementById("semester").style.display = "none";
+        } else {
+            document.getElementById("idField").style.display = "none";
+        }
+
+        async function handleSignup(e) {
+            e.preventDefault();
+            const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
+            
+            const data = {
+                name: document.getElementById("name").value,
+                email: document.getElementById("email").value,
+                password: document.getElementById("password").value,
+                department: document.getElementById("department").value,
+                semester: document.getElementById("semester").value,
+                role: selectedRole,
+                rollNo: document.getElementById("rollNo").value,
+                universityId: document.getElementById("idField").value
+            };
+
+            const res = await fetch(`${API_URL}/signup`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if(result.success) {
+                alert("Account Created! Please Login.");
+                window.location.href = "login.html";
+            } else {
+                alert("Error: " + result.msg);
+            }
+        }
+    </script>
 </body>
 </html>
