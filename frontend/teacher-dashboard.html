@@ -127,46 +127,58 @@
         async function loadTeacherData() {
             document.getElementById("tName").innerText = user.name;
             
-            // Load Students
-            const resS = await fetch(`${API_URL}/students`);
-            const students = await resS.json();
-            document.getElementById("studentBody").innerHTML = students.map(s => `
-                <tr>
-                    <td>${s.name}</td>
-                    <td>${s.rollNo || '2310...'}</td>
-                    <td><input type="number" id="att-${s._id}" value="${s.attendance || 0}"></td>
-                    <td><input type="number" id="st1-${s._id}" value="${s.marks?.st1 || 0}"></td>
-                    <td><button class="btn-primary" style="padding: 5px 10px;" onclick="saveAcademics('${s._id}')">Save</button></td>
-                </tr>
-            `).join('');
-
-            // Load Notifications & Availability
-            const resT = await fetch(`${API_URL}/teachers`);
-            const teachers = await resT.json();
-            const me = teachers.find(t => t._id === user._id);
-            
-            if (me) {
-                document.getElementById("statusSelect").value = me.status || "Available";
-                personalSchedule = me.ownTimetable || [];
-                renderScheduleUI();
+            try {
+                // 1. Load Students and Filter by Department (FIXED)
+                const resS = await fetch(`${API_URL}/students`);
+                const allStudents = await resS.json();
                 
-                document.getElementById("requestList").innerHTML = me.notifications.reverse().map(n => `
-                    <div class="inbox-item" style="border-left: 5px solid ${n.status === 'pending' ? '#8b0000' : '#28a745'}; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-                        <p><strong>From:</strong> ${n.studentName}</p>
-                        <p><strong>Reason:</strong> ${n.message}</p>
-                        <p><strong>Status:</strong> <span style="color: ${n.status === 'Approved' ? 'green' : 'red'}; font-weight: bold;">${n.status.toUpperCase()}</span></p>
-                        ${n.status === 'pending' ? `
-                            <div style="margin-top: 10px;">
-                                <button onclick="respond('${n.studentId}', '${n.id}', 'Approved')" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Approve & Send Email</button>
-                                <button onclick="respond('${n.studentId}', '${n.id}', 'Declined')" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-left: 5px;">Decline</button>
-                            </div>
-                        ` : ''}
-                    </div>
-                `).join('') || "<p>No meeting requests found.</p>";
+                // Sirf wahi students dikhao jinka department teacher se match kare
+                const myStudents = allStudents.filter(s => s.department === user.department);
+                
+                const studentBody = document.getElementById("studentBody");
+                if(myStudents.length === 0) {
+                    studentBody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>No students found in your department.</td></tr>";
+                } else {
+                    studentBody.innerHTML = myStudents.map(s => `
+                        <tr>
+                            <td>${s.name}</td>
+                            <td>${s.rollNo || 'N/A'}</td>
+                            <td><input type="number" id="att-${s._id}" value="${s.attendance || 0}"></td>
+                            <td><input type="number" id="st1-${s._id}" value="${s.marks?.st1 || 0}"></td>
+                            <td><button class="btn-primary" style="padding: 5px 10px;" onclick="saveAcademics('${s._id}')">Save</button></td>
+                        </tr>
+                    `).join('');
+                }
+
+                // 2. Load Notifications & Availability
+                const resT = await fetch(`${API_URL}/teachers`);
+                const teachers = await resT.json();
+                const me = teachers.find(t => t._id === user._id);
+                
+                if (me) {
+                    document.getElementById("statusSelect").value = me.status || "Available";
+                    personalSchedule = me.ownTimetable || [];
+                    renderScheduleUI();
+                    
+                    document.getElementById("requestList").innerHTML = me.notifications.slice().reverse().map(n => `
+                        <div class="inbox-item" style="border-left: 5px solid ${n.status === 'pending' ? '#8b0000' : '#28a745'}; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                            <p><strong>From:</strong> ${n.studentName}</p>
+                            <p><strong>Reason:</strong> ${n.message}</p>
+                            <p><strong>Status:</strong> <span style="color: ${n.status === 'Approved' ? 'green' : (n.status === 'pending' ? 'orange' : 'red')}; font-weight: bold;">${n.status.toUpperCase()}</span></p>
+                            ${n.status === 'pending' ? `
+                                <div style="margin-top: 10px;">
+                                    <button onclick="respond('${n.studentId}', '${n.id}', 'Approved')" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Approve & Send Email</button>
+                                    <button onclick="respond('${n.studentId}', '${n.id}', 'Declined')" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-left: 5px;">Decline</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('') || "<p>No meeting requests found.</p>";
+                }
+            } catch (err) {
+                console.error("Dashboard Loading Error:", err);
             }
         }
 
-        // --- NEW AVAILABILITY FUNCTIONS ---
         async function updateLiveStatus() {
             const newStatus = document.getElementById("statusSelect").value;
             await fetch(`${API_URL}/teacher/update-live-status`, {
@@ -202,7 +214,6 @@
             });
             if(res.ok) alert("Personal Timetable Saved!");
         }
-        // ----------------------------------
 
         async function respond(sId, nId, status) {
             const res = await fetch(`${API_URL}/update-status`, {
