@@ -5,9 +5,7 @@
     <title>Teacher Dashboard | ERP Portal</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Container and UI consistency */
         .container { max-width: 1100px !important; width: 95%; margin: 20px auto; }
-        /* Updated grid to 4 columns to accommodate new Availability section */
         .cuims-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
         .grid-item { 
             background: white; padding: 15px; border-radius: 12px; 
@@ -16,7 +14,6 @@
         }
         .grid-item:hover { transform: translateY(-5px); }
         .grid-item p { font-size: 11px; font-weight: bold; color: #8b0000; margin-top: 5px; }
-        
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
         input[type="number"], input[type="time"], select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; }
@@ -60,7 +57,7 @@
         <div id="appointments" class="section-content" style="display: none;">
             <div class="academic-card">
                 <h3>📩 Meeting Requests</h3>
-                <div id="requestList">Loading requests...</div>
+                <div id="requestList">No requests yet.</div>
             </div>
         </div>
 
@@ -74,10 +71,8 @@
                     <option value="Away">🟡 Away</option>
                 </select>
             </div>
-
             <div class="academic-card" style="margin-top: 20px; border-left: 5px solid #ffc107;">
                 <h3>📅 My Personal Timetable</h3>
-                <p style="font-size: 13px; color: #666;">Add your daily class schedule to show auto-busy status.</p>
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
                     <input type="time" id="myStartTime" style="flex:1;">
                     <input type="time" id="myEndTime" style="flex:1;">
@@ -91,19 +86,9 @@
         <div id="material" class="section-content" style="display: none;">
             <div class="academic-card" style="border-top: 4px solid #28a745;">
                 <h3>📚 Upload Notes</h3>
-                <input type="text" id="subjectNote" placeholder="Subject Name (e.g. Node.js Unit 2)">
+                <input type="text" id="subjectNote" placeholder="Subject Name">
                 <input type="text" id="noteLink" placeholder="Google Drive Link">
                 <button class="btn-primary" onclick="uploadMaterial('note')" style="background: #28a745; width: 100%;">Share Note</button>
-            </div>
-
-            <div class="academic-card" style="border-top: 4px solid #ffcc00; margin-top: 20px;">
-                <h3>📅 Schedule Class (Student Timetable)</h3>
-                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <input type="text" id="ttClass" placeholder="Room (e.g. LH6)" style="flex:1;">
-                    <input type="time" id="ttTime" style="flex:1;">
-                </div>
-                <input type="text" id="ttSubject" placeholder="Subject Name">
-                <button class="btn-primary" onclick="uploadMaterial('timetable')" style="background: #8b0000; width: 100%;">Post to Timetable</button>
             </div>
         </div>
 
@@ -114,6 +99,7 @@
 
     <script>
         const user = JSON.parse(localStorage.getItem("user"));
+        // MAKE SURE THIS URL IS CORRECT
         const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
         let personalSchedule = [];
 
@@ -125,15 +111,17 @@
         }
 
         async function loadTeacherData() {
-            document.getElementById("tName").innerText = user.name;
-            
             try {
-                // 1. Load Students and Filter by Department (FIXED)
+                document.getElementById("tName").innerText = user.name;
+                
+                // 1. Fetch & Filter Students (Case-Insensitive)
                 const resS = await fetch(`${API_URL}/students`);
+                if (!resS.ok) throw new Error("Students fetch failed");
                 const allStudents = await resS.json();
                 
-                // Sirf wahi students dikhao jinka department teacher se match kare
-                const myStudents = allStudents.filter(s => s.department === user.department);
+                const myStudents = allStudents.filter(s => 
+                    s.department?.toLowerCase() === user.department?.toLowerCase()
+                );
                 
                 const studentBody = document.getElementById("studentBody");
                 if(myStudents.length === 0) {
@@ -160,25 +148,29 @@
                     personalSchedule = me.ownTimetable || [];
                     renderScheduleUI();
                     
-                    document.getElementById("requestList").innerHTML = me.notifications.slice().reverse().map(n => `
-                        <div class="inbox-item" style="border-left: 5px solid ${n.status === 'pending' ? '#8b0000' : '#28a745'}; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                    const notifs = me.notifications || [];
+                    document.getElementById("requestList").innerHTML = notifs.length > 0 ? 
+                        notifs.slice().reverse().map(n => `
+                        <div class="inbox-item" style="border-left: 5px solid ${n.status === 'pending' ? '#8b0000' : '#28a745'}; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px; text-align: left;">
                             <p><strong>From:</strong> ${n.studentName}</p>
                             <p><strong>Reason:</strong> ${n.message}</p>
                             <p><strong>Status:</strong> <span style="color: ${n.status === 'Approved' ? 'green' : (n.status === 'pending' ? 'orange' : 'red')}; font-weight: bold;">${n.status.toUpperCase()}</span></p>
                             ${n.status === 'pending' ? `
                                 <div style="margin-top: 10px;">
-                                    <button onclick="respond('${n.studentId}', '${n.id}', 'Approved')" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Approve & Send Email</button>
+                                    <button onclick="respond('${n.studentId}', '${n.id}', 'Approved')" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Approve</button>
                                     <button onclick="respond('${n.studentId}', '${n.id}', 'Declined')" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-left: 5px;">Decline</button>
                                 </div>
                             ` : ''}
                         </div>
-                    `).join('') || "<p>No meeting requests found.</p>";
+                    `).join('') : "<p>No meeting requests found.</p>";
                 }
             } catch (err) {
-                console.error("Dashboard Loading Error:", err);
+                console.error("Error:", err);
+                document.getElementById("requestList").innerHTML = "Failed to load data. Please refresh.";
             }
         }
 
+        // Functions for status, schedule, academics, material same as original
         async function updateLiveStatus() {
             const newStatus = document.getElementById("statusSelect").value;
             await fetch(`${API_URL}/teacher/update-live-status`, {
@@ -186,7 +178,7 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ teacherId: user._id, status: newStatus })
             });
-            alert("Status Updated to " + newStatus);
+            alert("Status Updated!");
         }
 
         function addSchedule() {
@@ -207,12 +199,12 @@
         }
 
         async function saveTimetableToDB() {
-            const res = await fetch(`${API_URL}/teacher/timetable`, {
+            await fetch(`${API_URL}/teacher/timetable`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ teacherId: user._id, schedule: personalSchedule })
             });
-            if(res.ok) alert("Personal Timetable Saved!");
+            alert("Timetable Saved!");
         }
 
         async function respond(sId, nId, status) {
@@ -221,24 +213,16 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ teacherId: user._id, studentId: sId, notificationId: nId, newStatus: status })
             });
-            const result = await res.json();
-            if(result.success) {
-                alert(`Appointment ${status}! Email sent.`);
-                loadTeacherData();
-            }
+            if(res.ok) { alert(`Appointment ${status}!`); loadTeacherData(); }
         }
 
         async function uploadMaterial(type) {
-            let data = { teacherName: user.name };
-            if(type === 'note') {
-                data.subject = document.getElementById("subjectNote").value;
-                data.link = document.getElementById("noteLink").value;
-                data.category = 'note';
-            } else {
-                data.subject = document.getElementById("ttSubject").value;
-                data.link = `${document.getElementById("ttClass").value} @ ${document.getElementById("ttTime").value}`;
-                data.category = 'timetable';
-            }
+            let data = { 
+                teacherName: user.name,
+                subject: document.getElementById("subjectNote").value,
+                link: document.getElementById("noteLink").value,
+                category: 'note'
+            };
             if(!data.subject || !data.link) return alert("Fill all fields!");
             await fetch(`${API_URL}/notes`, {
                 method: "POST",

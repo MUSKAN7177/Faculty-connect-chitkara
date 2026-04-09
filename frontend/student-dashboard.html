@@ -5,10 +5,7 @@
     <title>Student ERP | Faculty Connect</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Container width fix for professional look */
         .container { max-width: 1100px !important; width: 95%; margin: 20px auto; }
-        
-        /* CUIMS Grid Styling */
         .cuims-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
         .grid-item { 
             background: white; padding: 15px; border-radius: 12px; 
@@ -17,14 +14,12 @@
         }
         .grid-item:hover { transform: translateY(-5px); }
         .grid-item p { font-size: 11px; font-weight: bold; color: #8b0000; margin-top: 5px; }
-
-        /* Timetable & Faculty Card Styling */
         .period-card {
             border-left: 5px solid #28a745; background: #f8f9fa; 
             padding: 15px; margin-bottom: 10px; display: flex; 
             justify-content: space-between; align-items: center; border-radius: 0 8px 8px 0;
         }
-        .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; color: white; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; color: white; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -50,18 +45,11 @@
             </div>
         </div>
 
-        <div id="timetable" class="section-content" style="display: none;">
-            <div class="academic-card">
-                <h3 style="border-bottom: 2px solid #f1f1f1; padding-bottom: 10px; margin-bottom: 15px;">Wednesday (Today) ▼</h3>
-                <div id="detailedTimetable">Loading schedule...</div>
-            </div>
-        </div>
-        
         <div id="academics" class="section-content active">
             <div class="academic-card">
                 <h3>My Current Status</h3>
                 <div class="dashboard-grid">
-                    <div class="erp-card" id="cardAttendance">
+                    <div class="erp-card">
                         <div class="card-title">Attendance</div>
                         <div class="card-value"><span id="myAttVal">0</span>%</div>
                     </div>
@@ -69,12 +57,10 @@
                         <div class="card-title">ST1 Marks</div>
                         <div class="card-value"><span id="myST1">0</span></div>
                     </div>
-                    <div class="erp-card">
-                        <div class="card-title">ST2 Marks</div>
-                        <div class="card-value"><span id="myST2">0</span></div>
-                    </div>
                 </div>
-                <div class="prog-container"><div id="barVisual" class="prog-bar" style="width: 0%;">0%</div></div>
+                <div class="prog-container" style="background:#eee; border-radius:10px; height:20px; margin-top:10px;">
+                    <div id="barVisual" class="prog-bar" style="width: 0%; height:100%; text-align:center; color:white; border-radius:10px;">0%</div>
+                </div>
             </div>
         </div>
 
@@ -89,20 +75,28 @@
         <div id="book" class="section-content" style="display: none;">
             <div class="academic-card">
                 <h3>Connect with Faculty</h3>
-                <select id="teacherSelect"></select>
-                <textarea id="msg" placeholder="Reason for meeting..."></textarea>
-                <button class="btn-primary" onclick="sendRequest()">Book Appointment</button>
+                <label>Select Teacher:</label>
+                <select id="teacherSelect" style="width:100%; padding:10px; margin-bottom:10px;"></select>
+                <textarea id="msg" placeholder="Reason for meeting..." style="width:100%; height:80px; padding:10px; margin-bottom:10px;"></textarea>
+                <button class="btn-primary" onclick="sendRequest()" style="width:100%;">Book Appointment</button>
+            </div>
+        </div>
+
+        <div id="timetable" class="section-content" style="display: none;">
+            <div class="academic-card">
+                <h3>📅 Today's Schedule</h3>
+                <div id="detailedTimetable">Loading schedule...</div>
             </div>
         </div>
 
         <div id="material" class="section-content" style="display: none;">
             <div class="academic-card">
-                <h3>📚 Study Materials & Notes</h3>
+                <h3>📚 Study Materials</h3>
                 <div id="notesInbox">Loading notes...</div>
             </div>
         </div>
 
-        <div style="text-align: center; padding: 20px 0;">
+        <div style="text-align: center; padding: 20px;">
             <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
     </div>
@@ -113,7 +107,9 @@
 
         if (!user) window.location.href = "login.html";
         document.getElementById("welcomeText").innerText = `Welcome, ${user.name}`;
-        document.getElementById("branchInfo").innerText = `Branch: ${user.department} | Semester: ${user.semester}`;
+        if(document.getElementById("branchInfo")) {
+            document.getElementById("branchInfo").innerText = `Branch: ${user.department}`;
+        }
 
         function showTab(tabId) {
             document.querySelectorAll('.section-content').forEach(s => s.style.display = 'none');
@@ -123,38 +119,43 @@
             if (tabId === 'academics') loadERPData();
             if (tabId === 'timetable') loadDetailedTimetable();
             if (tabId === 'availability') loadFilteredFaculty();
-            if (tabId === 'book' || !document.getElementById("teacherSelect").innerHTML) loadFaculty();
+            if (tabId === 'book') loadFacultyListForDropdown();
         }
 
         async function loadERPData() {
-            const res = await fetch(`${API_URL}/students`);
-            const students = await res.json();
-            const me = students.find(s => s._id === user._id);
-            if (me) {
-                const att = me.attendance || 0;
-                document.getElementById("myAttVal").innerText = att;
-                document.getElementById("myST1").innerText = me.marks?.st1 || 0;
-                document.getElementById("myST2").innerText = me.marks?.st2 || 0;
-                const bar = document.getElementById("barVisual");
-                bar.style.width = att + "%";
-                bar.innerText = att + "%";
-                bar.style.background = att < 75 ? "red" : "green";
-            }
+            try {
+                const res = await fetch(`${API_URL}/students`);
+                const students = await res.json();
+                const me = students.find(s => s._id === user._id);
+                if (me) {
+                    const att = me.attendance || 0;
+                    document.getElementById("myAttVal").innerText = att;
+                    document.getElementById("myST1").innerText = me.marks?.st1 || 0;
+                    const bar = document.getElementById("barVisual");
+                    bar.style.width = att + "%";
+                    bar.innerText = att + "%";
+                    bar.style.background = att < 75 ? "#dc3545" : "#28a745";
+                }
+            } catch(e) { console.log(e); }
         }
 
         async function loadFilteredFaculty() {
             try {
-                // Fetching only teachers from same branch/semester
-                const res = await fetch(`${API_URL}/teachers/filter?dept=${user.department}&sem=${user.semester}`);
+                const res = await fetch(`${API_URL}/teachers`);
                 const teachers = await res.json();
-                const listDiv = document.getElementById("filteredTeacherList");
                 
-                listDiv.innerHTML = teachers.map(t => `
+                // Filter teachers by department (Same as teacher side logic)
+                const myFaculty = teachers.filter(t => 
+                    t.department?.toLowerCase() === user.department?.toLowerCase()
+                );
+
+                const listDiv = document.getElementById("filteredTeacherList");
+                listDiv.innerHTML = myFaculty.map(t => `
                     <div class="period-card" style="border-left-color: ${t.status === 'Available' ? '#28a745' : '#dc3545'}">
                         <div>
                             <strong>${t.name}</strong> <br>
-                            <span class="status-badge" style="background: ${t.status === 'Available' ? '#28a745' : '#dc3545'}">
-                                ${t.status}
+                            <span class="status-badge" style="background: ${t.status === 'Available' ? '#28a745' : (t.status === 'Away' ? '#ffc107' : '#dc3545')}">
+                                ${t.status || 'Available'}
                             </span>
                         </div>
                         <button class="btn-primary" onclick="openBookingTab('${t._id}')" style="width: auto; padding: 5px 12px; font-size: 11px;">
@@ -165,9 +166,16 @@
             } catch (err) { console.error(err); }
         }
 
+        async function loadFacultyListForDropdown() {
+            const res = await fetch(`${API_URL}/teachers`);
+            const teachers = await res.json();
+            const myFaculty = teachers.filter(t => t.department?.toLowerCase() === user.department?.toLowerCase());
+            document.getElementById("teacherSelect").innerHTML = myFaculty.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
+        }
+
         function openBookingTab(tId) {
             showTab('book');
-            document.getElementById("teacherSelect").value = tId;
+            setTimeout(() => { document.getElementById("teacherSelect").value = tId; }, 100);
         }
 
         async function loadDetailedTimetable() {
@@ -176,17 +184,14 @@
             const ttDiv = document.getElementById("detailedTimetable");
             const schedule = data.filter(item => item.category === 'timetable');
             
-            ttDiv.innerHTML = schedule.map((cls, index) => `
-                <div class="period-card" style="border-left-color: ${index === 1 ? 'red' : '#28a745'}">
+            ttDiv.innerHTML = schedule.map((cls) => `
+                <div class="period-card">
                     <div>
-                        <strong style="color: #333;">Period ${index + 1} (LH6)</strong> <br>
-                        <span style="font-size: 13px; color: #666;">${cls.subject}</span>
+                        <strong>${cls.subject}</strong> <br>
+                        <small>Location: ${cls.link}</small>
                     </div>
                     <div style="text-align: right;">
-                        <span class="status-badge" style="background: ${index === 1 ? 'red' : '#007bff'}">
-                            ${index === 1 ? 'LIVE' : 'Upcoming'}
-                        </span> <br>
-                        <small style="color: #888;">Prof. ${cls.teacherName}</small>
+                        <small>Prof. ${cls.teacherName}</small>
                     </div>
                 </div>
             `).join('') || "<p>No classes scheduled today.</p>";
@@ -199,30 +204,29 @@
             const notes = data.filter(item => item.category === 'note');
             
             noteDiv.innerHTML = notes.map(item => `
-                <div class="inbox-item" style="border-left: 5px solid #8b0000; margin-bottom:10px; padding:10px; background:#f9f9f9; border-radius:5px;">
+                <div class="inbox-item" style="border-left: 5px solid #8b0000; margin-bottom:10px; padding:15px; background:#f9f9f9; border-radius:8px;">
                     <strong>${item.subject}</strong> <br>
-                    <small>🔗 Link: <a href="${item.link}" target="_blank">View Note</a></small>
-                    <br><small>Prof. ${item.teacherName}</small>
+                    <a href="${item.link}" target="_blank" style="color:#007bff; font-size:13px;">View Resource</a>
+                    <br><small>Uploaded by Prof. ${item.teacherName}</small>
                 </div>
-            `).join('') || "<p>No notes available.</p>";
-        }
-
-        async function loadFaculty() {
-            const res = await fetch(`${API_URL}/teachers`);
-            const teachers = await res.json();
-            document.getElementById("teacherSelect").innerHTML = teachers.map(t => `<option value="${t._id}">${t.name} (${t.status})</option>`).join('');
+            `).join('') || "<p>No resources available.</p>";
         }
 
         async function sendRequest() {
             const tId = document.getElementById("teacherSelect").value;
             const msg = document.getElementById("msg").value;
             if(!msg) return alert("Please enter a reason!");
-            await fetch(`${API_URL}/send-request`, {
+            
+            const res = await fetch(`${API_URL}/send-request`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ teacherId: tId, studentName: user.name, studentId: user._id, message: msg })
             });
-            alert("Request Sent!");
+            if(res.ok) {
+                alert("Request Sent Successfully!");
+                document.getElementById("msg").value = "";
+                showTab('availability');
+            }
         }
 
         function logout() { localStorage.clear(); window.location.href="role.html"; }
