@@ -23,36 +23,53 @@
     </div>
 
     <script>
+    // Page load hote hi check karo ki role kya select kiya tha
+    window.onload = function() {
         const role = localStorage.getItem("selectedRole") || "student";
         document.getElementById("roleText").innerText = `Logging in as ${role.toUpperCase()}`;
+        
+        // Agar teacher hai toh title change kar do
+        if(role === 'teacher') {
+            document.getElementById("loginTitle").innerText = "Faculty Login";
+        } else {
+            document.getElementById("loginTitle").innerText = "Student Login";
+        }
+    }
 
-        async function handleLogin(e) {
-            e.preventDefault();
-            const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
-            
-            const email = document.getElementById("loginEmail").value;
-            const password = document.getElementById("loginPassword").value;
+    async function handleLogin(e) {
+        e.preventDefault();
+        const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
+        
+        // LocalStorage se fresh role uthao
+        const role = localStorage.getItem("selectedRole") || "student";
+        const email = document.getElementById("loginEmail").value;
+        const password = document.getElementById("loginPassword").value;
 
+        try {
             const res = await fetch(`${API_URL}/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password, role })
+                body: JSON.stringify({ email, password, role }) // Role backend ko ja raha hai
             });
 
             const result = await res.json();
             if (result.success) {
-                // VERY IMPORTANT: Storing full user object with Branch/Semester
                 localStorage.setItem("user", JSON.stringify(result.user));
                 
+                // Redirect logic based on role
                 if (role === "student") {
                     window.location.href = "student-dashboard.html";
                 } else {
                     window.location.href = "teacher-dashboard.html";
                 }
             } else {
-                alert("Invalid Credentials!");
+                alert("Login Failed: " + result.msg);
             }
+        } catch (err) {
+            console.error(err);
+            alert("Server error, please try again.");
         }
-    </script>
+    }
+</script>
 </body>
 </html>

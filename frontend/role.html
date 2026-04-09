@@ -11,8 +11,15 @@
         <h2>Welcome to Portal</h2>
         <p>Please select your identity to continue</p>
         <div class="role-box">
-            <button onclick="setRole('student')">👨‍🎓 I am a Student</button>
-            <button onclick="setRole('teacher')" style="margin-top: 15px; background: #5a0000;">👨‍🏫 I am a Faculty</button>
+            <button onclick="selectRole('teacher')">Faculty / Teacher</button>
+<button onclick="selectRole('student')">Student</button>
+
+<script>
+function selectRole(role) {
+    localStorage.setItem("selectedRole", role); // Yahan value save ho rahi hai
+    window.location.href = "login.html";
+}
+</script>
         </div>
     </div>
     <script>
