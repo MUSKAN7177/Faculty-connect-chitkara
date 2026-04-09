@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="style.css">
     <style>
         .container { max-width: 1100px !important; width: 95%; margin: 20px auto; }
-        .cuims-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
+        .cuims-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin: 20px 0; }
         .grid-item { 
             background: white; padding: 15px; border-radius: 12px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; 
@@ -20,6 +20,8 @@
             justify-content: space-between; align-items: center; border-radius: 0 8px 8px 0;
         }
         .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; color: white; font-weight: bold; }
+        .profile-img { width: 80px; height: 80px; border-radius: 50%; background: #eee; margin-bottom: 15px; }
+        input[type="password"], textarea, select { padding: 10px; border-radius: 6px; border: 1px solid #ddd; width: 100%; }
     </style>
 </head>
 <body>
@@ -42,6 +44,10 @@
             <div class="grid-item" onclick="showTab('availability')">
                 <img src="https://cdn-icons-png.flaticon.com/512/3079/3079165.png" width="35">
                 <p>Availability</p>
+            </div>
+            <div class="grid-item" onclick="showTab('profile')">
+                <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" width="35">
+                <p>My Profile</p>
             </div>
         </div>
 
@@ -76,8 +82,8 @@
             <div class="academic-card">
                 <h3>Connect with Faculty</h3>
                 <label>Select Teacher:</label>
-                <select id="teacherSelect" style="width:100%; padding:10px; margin-bottom:10px;"></select>
-                <textarea id="msg" placeholder="Reason for meeting..." style="width:100%; height:80px; padding:10px; margin-bottom:10px;"></textarea>
+                <select id="teacherSelect" style="margin-bottom:10px;"></select>
+                <textarea id="msg" placeholder="Reason for meeting..." style="margin-bottom:10px;"></textarea>
                 <button class="btn-primary" onclick="sendRequest()" style="width:100%;">Book Appointment</button>
             </div>
         </div>
@@ -96,6 +102,24 @@
             </div>
         </div>
 
+        <div id="profile" class="section-content" style="display: none;">
+            <div class="academic-card" style="text-align: center;">
+                <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" class="profile-img">
+                <h3 id="pName">Student Name</h3>
+                <p id="pEmail" style="color: #666;"></p>
+                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+                <div style="text-align: left; font-size: 14px;">
+                    <p><strong>Roll No:</strong> <span id="pRoll"></span></p>
+                    <p><strong>Department:</strong> <span id="pDept"></span></p>
+                </div>
+                <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 10px;">
+                    <h4>Change Password</h4>
+                    <input type="password" id="sNewPass" placeholder="Enter New Password" style="margin-top: 10px;">
+                    <button class="btn-primary" onclick="changeStudentPass()" style="width: 100%; margin-top: 10px;">Update Password</button>
+                </div>
+            </div>
+        </div>
+
         <div style="text-align: center; padding: 20px;">
             <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
@@ -103,7 +127,7 @@
 
     <script>
         const user = JSON.parse(localStorage.getItem("user"));
-        const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
+        const API_URL = "https://faculty-connect-app.onrender.com";
 
         if (!user) window.location.href = "login.html";
         document.getElementById("welcomeText").innerText = `Welcome, ${user.name}`;
@@ -119,7 +143,25 @@
             if (tabId === 'academics') loadERPData();
             if (tabId === 'timetable') loadDetailedTimetable();
             if (tabId === 'availability') loadFilteredFaculty();
-            if (tabId === 'book') loadFacultyListForDropdown();
+            if (tabId === 'profile') loadProfileData();
+        }
+
+        function loadProfileData() {
+            document.getElementById("pName").innerText = user.name;
+            document.getElementById("pEmail").innerText = user.email;
+            document.getElementById("pRoll").innerText = user.rollNo || "N/A";
+            document.getElementById("pDept").innerText = user.department;
+        }
+
+        async function changeStudentPass() {
+            const newPass = document.getElementById("sNewPass").value;
+            if(!newPass) return alert("Please enter a password!");
+            const res = await fetch(`${API_URL}/change-password`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: user._id, role: "student", newPassword: newPass })
+            });
+            if(res.ok) { alert("Password Updated!"); document.getElementById("sNewPass").value = ""; }
         }
 
         async function loadERPData() {
@@ -143,11 +185,7 @@
             try {
                 const res = await fetch(`${API_URL}/teachers`);
                 const teachers = await res.json();
-                
-                // Filter teachers by department (Same as teacher side logic)
-                const myFaculty = teachers.filter(t => 
-                    t.department?.toLowerCase() === user.department?.toLowerCase()
-                );
+                const myFaculty = teachers.filter(t => t.department?.toLowerCase() === user.department?.toLowerCase());
 
                 const listDiv = document.getElementById("filteredTeacherList");
                 listDiv.innerHTML = myFaculty.map(t => `
@@ -158,41 +196,33 @@
                                 ${t.status || 'Available'}
                             </span>
                         </div>
-                        <button class="btn-primary" onclick="openBookingTab('${t._id}')" style="width: auto; padding: 5px 12px; font-size: 11px;">
-                            Book
-                        </button>
+                        <button class="btn-primary" onclick="openBookingTab('${t._id}')" style="width: auto; padding: 5px 12px; font-size: 11px;">Book</button>
                     </div>
                 `).join('') || "<p>No faculty found for your branch.</p>";
             } catch (err) { console.error(err); }
         }
 
-        async function loadFacultyListForDropdown() {
+        function openBookingTab(tId) {
+            showTab('book');
+            loadFacultyListForDropdown(tId);
+        }
+
+        async function loadFacultyListForDropdown(selectedId) {
             const res = await fetch(`${API_URL}/teachers`);
             const teachers = await res.json();
             const myFaculty = teachers.filter(t => t.department?.toLowerCase() === user.department?.toLowerCase());
-            document.getElementById("teacherSelect").innerHTML = myFaculty.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
-        }
-
-        function openBookingTab(tId) {
-            showTab('book');
-            setTimeout(() => { document.getElementById("teacherSelect").value = tId; }, 100);
+            const dropdown = document.getElementById("teacherSelect");
+            dropdown.innerHTML = myFaculty.map(t => `<option value="${t._id}" ${t._id === selectedId ? 'selected' : ''}>${t.name}</option>`).join('');
         }
 
         async function loadDetailedTimetable() {
             const res = await fetch(`${API_URL}/notes`);
             const data = await res.json();
-            const ttDiv = document.getElementById("detailedTimetable");
             const schedule = data.filter(item => item.category === 'timetable');
-            
-            ttDiv.innerHTML = schedule.map((cls) => `
+            document.getElementById("detailedTimetable").innerHTML = schedule.map((cls) => `
                 <div class="period-card">
-                    <div>
-                        <strong>${cls.subject}</strong> <br>
-                        <small>Location: ${cls.link}</small>
-                    </div>
-                    <div style="text-align: right;">
-                        <small>Prof. ${cls.teacherName}</small>
-                    </div>
+                    <div><strong>${cls.subject}</strong> <br><small>Location: ${cls.link}</small></div>
+                    <div style="text-align: right;"><small>Prof. ${cls.teacherName}</small></div>
                 </div>
             `).join('') || "<p>No classes scheduled today.</p>";
         }
@@ -200,10 +230,8 @@
         async function loadMaterial() {
             const res = await fetch(`${API_URL}/notes`);
             const data = await res.json();
-            const noteDiv = document.getElementById("notesInbox");
             const notes = data.filter(item => item.category === 'note');
-            
-            noteDiv.innerHTML = notes.map(item => `
+            document.getElementById("notesInbox").innerHTML = notes.map(item => `
                 <div class="inbox-item" style="border-left: 5px solid #8b0000; margin-bottom:10px; padding:15px; background:#f9f9f9; border-radius:8px;">
                     <strong>${item.subject}</strong> <br>
                     <a href="${item.link}" target="_blank" style="color:#007bff; font-size:13px;">View Resource</a>
@@ -216,17 +244,12 @@
             const tId = document.getElementById("teacherSelect").value;
             const msg = document.getElementById("msg").value;
             if(!msg) return alert("Please enter a reason!");
-            
             const res = await fetch(`${API_URL}/send-request`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ teacherId: tId, studentName: user.name, studentId: user._id, message: msg })
             });
-            if(res.ok) {
-                alert("Request Sent Successfully!");
-                document.getElementById("msg").value = "";
-                showTab('availability');
-            }
+            if(res.ok) { alert("Request Sent!"); document.getElementById("msg").value = ""; showTab('availability'); }
         }
 
         function logout() { localStorage.clear(); window.location.href="role.html"; }

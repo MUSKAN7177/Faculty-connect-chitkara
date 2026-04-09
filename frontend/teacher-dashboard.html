@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="style.css">
     <style>
         .container { max-width: 1100px !important; width: 95%; margin: 20px auto; }
-        .cuims-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
+        .cuims-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin: 20px 0; }
         .grid-item { 
             background: white; padding: 15px; border-radius: 12px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; 
@@ -16,9 +16,10 @@
         .grid-item p { font-size: 11px; font-weight: bold; color: #8b0000; margin-top: 5px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        input[type="number"], input[type="time"], select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; }
+        input[type="number"], input[type="time"], input[type="password"], select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; }
         .status-badge { padding: 4px 10px; border-radius: 4px; color: white; font-weight: bold; font-size: 12px; }
         .schedule-chip { background: #e9ecef; padding: 5px 10px; border-radius: 20px; font-size: 12px; margin: 5px; display: inline-block; }
+        .profile-img { width: 80px; height: 80px; border-radius: 50%; background: #eee; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -41,6 +42,10 @@
             <div class="grid-item" onclick="showTab('material')">
                 <img src="https://cdn-icons-png.flaticon.com/512/2436/2436636.png" width="35">
                 <p>Upload Center</p>
+            </div>
+            <div class="grid-item" onclick="showTab('profile')">
+                <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" width="35">
+                <p>My Profile</p>
             </div>
         </div>
 
@@ -86,9 +91,27 @@
         <div id="material" class="section-content" style="display: none;">
             <div class="academic-card" style="border-top: 4px solid #28a745;">
                 <h3>📚 Upload Notes</h3>
-                <input type="text" id="subjectNote" placeholder="Subject Name">
-                <input type="text" id="noteLink" placeholder="Google Drive Link">
+                <input type="text" id="subjectNote" placeholder="Subject Name" style="width: 100%;">
+                <input type="text" id="noteLink" placeholder="Google Drive Link" style="width: 100%;">
                 <button class="btn-primary" onclick="uploadMaterial('note')" style="background: #28a745; width: 100%;">Share Note</button>
+            </div>
+        </div>
+
+        <div id="profile" class="section-content" style="display: none;">
+            <div class="academic-card" style="text-align: center;">
+                <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" class="profile-img">
+                <h3 id="pName">Faculty Name</h3>
+                <p id="pEmail" style="color: #666;"></p>
+                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+                <div style="text-align: left; font-size: 14px;">
+                    <p><strong>Department:</strong> <span id="pDept"></span></p>
+                    <p><strong>University ID:</strong> <span id="pUid"></span></p>
+                </div>
+                <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 10px;">
+                    <h4>Change Password</h4>
+                    <input type="password" id="tNewPass" placeholder="Enter New Password" style="width: 100%; margin-top: 10px;">
+                    <button class="btn-primary" onclick="changeTeacherPass()" style="width: 100%; margin-top: 10px;">Update Password</button>
+                </div>
             </div>
         </div>
 
@@ -99,8 +122,7 @@
 
     <script>
         const user = JSON.parse(localStorage.getItem("user"));
-        // MAKE SURE THIS URL IS CORRECT
-        const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
+        const API_URL = "https://faculty-connect-app.onrender.com";
         let personalSchedule = [];
 
         if (!user) window.location.href = "login.html";
@@ -108,37 +130,28 @@
         function showTab(tabId) {
             document.querySelectorAll('.section-content').forEach(s => s.style.display = 'none');
             document.getElementById(tabId).style.display = 'block';
+            if (tabId === 'profile') loadProfileData();
         }
 
         async function loadTeacherData() {
             try {
                 document.getElementById("tName").innerText = user.name;
                 
-                // 1. Fetch & Filter Students (Case-Insensitive)
                 const resS = await fetch(`${API_URL}/students`);
-                if (!resS.ok) throw new Error("Students fetch failed");
                 const allStudents = await resS.json();
-                
-                const myStudents = allStudents.filter(s => 
-                    s.department?.toLowerCase() === user.department?.toLowerCase()
-                );
+                const myStudents = allStudents.filter(s => s.department?.toLowerCase() === user.department?.toLowerCase());
                 
                 const studentBody = document.getElementById("studentBody");
-                if(myStudents.length === 0) {
-                    studentBody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>No students found in your department.</td></tr>";
-                } else {
-                    studentBody.innerHTML = myStudents.map(s => `
-                        <tr>
-                            <td>${s.name}</td>
-                            <td>${s.rollNo || 'N/A'}</td>
-                            <td><input type="number" id="att-${s._id}" value="${s.attendance || 0}"></td>
-                            <td><input type="number" id="st1-${s._id}" value="${s.marks?.st1 || 0}"></td>
-                            <td><button class="btn-primary" style="padding: 5px 10px;" onclick="saveAcademics('${s._id}')">Save</button></td>
-                        </tr>
-                    `).join('');
-                }
+                studentBody.innerHTML = myStudents.map(s => `
+                    <tr>
+                        <td>${s.name}</td>
+                        <td>${s.rollNo || 'N/A'}</td>
+                        <td><input type="number" id="att-${s._id}" value="${s.attendance || 0}"></td>
+                        <td><input type="number" id="st1-${s._id}" value="${s.marks?.st1 || 0}"></td>
+                        <td><button class="btn-primary" style="padding: 5px 10px;" onclick="saveAcademics('${s._id}')">Save</button></td>
+                    </tr>
+                `).join('') || "<tr><td colspan='5'>No students found.</td></tr>";
 
-                // 2. Load Notifications & Availability
                 const resT = await fetch(`${API_URL}/teachers`);
                 const teachers = await resT.json();
                 const me = teachers.find(t => t._id === user._id);
@@ -149,12 +162,11 @@
                     renderScheduleUI();
                     
                     const notifs = me.notifications || [];
-                    document.getElementById("requestList").innerHTML = notifs.length > 0 ? 
-                        notifs.slice().reverse().map(n => `
+                    document.getElementById("requestList").innerHTML = notifs.slice().reverse().map(n => `
                         <div class="inbox-item" style="border-left: 5px solid ${n.status === 'pending' ? '#8b0000' : '#28a745'}; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px; text-align: left;">
                             <p><strong>From:</strong> ${n.studentName}</p>
                             <p><strong>Reason:</strong> ${n.message}</p>
-                            <p><strong>Status:</strong> <span style="color: ${n.status === 'Approved' ? 'green' : (n.status === 'pending' ? 'orange' : 'red')}; font-weight: bold;">${n.status.toUpperCase()}</span></p>
+                            <p><strong>Status:</strong> <b>${n.status.toUpperCase()}</b></p>
                             ${n.status === 'pending' ? `
                                 <div style="margin-top: 10px;">
                                     <button onclick="respond('${n.studentId}', '${n.id}', 'Approved')" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Approve</button>
@@ -162,21 +174,35 @@
                                 </div>
                             ` : ''}
                         </div>
-                    `).join('') : "<p>No meeting requests found.</p>";
+                    `).join('') || "No requests yet.";
                 }
-            } catch (err) {
-                console.error("Error:", err);
-                document.getElementById("requestList").innerHTML = "Failed to load data. Please refresh.";
-            }
+            } catch (err) { console.error(err); }
         }
 
-        // Functions for status, schedule, academics, material same as original
+        function loadProfileData() {
+            document.getElementById("pName").innerText = user.name;
+            document.getElementById("pEmail").innerText = user.email;
+            document.getElementById("pDept").innerText = user.department;
+            document.getElementById("pUid").innerText = user.universityId || "N/A";
+        }
+
+        async function changeTeacherPass() {
+            const newPass = document.getElementById("tNewPass").value;
+            if(!newPass) return alert("Please enter a password!");
+            const res = await fetch(`${API_URL}/change-password`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: user._id, role: "teacher", newPassword: newPass })
+            });
+            if(res.ok) { alert("Password Updated!"); document.getElementById("tNewPass").value = ""; }
+        }
+
         async function updateLiveStatus() {
-            const newStatus = document.getElementById("statusSelect").value;
+            const status = document.getElementById("statusSelect").value;
             await fetch(`${API_URL}/teacher/update-live-status`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ teacherId: user._id, status: newStatus })
+                body: JSON.stringify({ teacherId: user._id, status: status })
             });
             alert("Status Updated!");
         }
@@ -191,10 +217,7 @@
 
         function renderScheduleUI() {
             document.getElementById("scheduleList").innerHTML = personalSchedule.map((s, idx) => `
-                <div class="schedule-chip">
-                    ${s.start} - ${s.end} 
-                    <span style="color:red; cursor:pointer; margin-left:5px;" onclick="personalSchedule.splice(${idx},1); renderScheduleUI();">×</span>
-                </div>
+                <div class="schedule-chip">${s.start} - ${s.end} <span style="color:red; cursor:pointer;" onclick="personalSchedule.splice(${idx},1); renderScheduleUI();">×</span></div>
             `).join('');
         }
 
@@ -217,32 +240,15 @@
         }
 
         async function uploadMaterial(type) {
-            let data = { 
-                teacherName: user.name,
-                subject: document.getElementById("subjectNote").value,
-                link: document.getElementById("noteLink").value,
-                category: 'note'
-            };
+            let data = { teacherName: user.name, subject: document.getElementById("subjectNote").value, link: document.getElementById("noteLink").value, category: 'note' };
             if(!data.subject || !data.link) return alert("Fill all fields!");
-            await fetch(`${API_URL}/notes`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
+            await fetch(`${API_URL}/notes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
             alert("Posted!");
         }
 
         async function saveAcademics(sId) {
-            const data = {
-                studentId: sId,
-                attendance: document.getElementById(`att-${sId}`).value,
-                marks: { st1: document.getElementById(`st1-${sId}`).value }
-            };
-            await fetch(`${API_URL}/update-academics`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
+            const data = { studentId: sId, attendance: document.getElementById(`att-${sId}`).value, marks: { st1: document.getElementById(`st1-${sId}`).value } };
+            await fetch(`${API_URL}/update-academics`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
             alert("Data Saved!");
         }
 

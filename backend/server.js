@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 📧 Nodemailer Transporter Setup
+// 📧 Nodemailer Setup
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -17,7 +17,6 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// 🔗 Health Check
 app.get("/", (req, res) => res.send("Backend is Running Successfully!"));
 
 // 🔗 Database Connection
@@ -70,7 +69,6 @@ const Notes = mongoose.model("Notes", NotesSchema);
 app.post("/signup", async (req, res) => {
     try {
         const { role, ...details } = req.body;
-        // Case-insensitive role check
         const Model = (role.toLowerCase() === "student") ? Student : Teacher;
         const newUser = new Model(details);
         await newUser.save();
@@ -81,13 +79,11 @@ app.post("/signup", async (req, res) => {
 app.post("/login", async (req, res) => {
     try {
         const { email, password, role } = req.body;
-        // Fix: Case-insensitive role comparison
         const lowerRole = role.toLowerCase();
         const Model = (lowerRole === "student") ? Student : Teacher;
         
         const user = await Model.findOne({ email, password });
         if (user) {
-            // Send back user data without password for security
             const userData = user.toObject();
             delete userData.password;
             res.json({ success: true, user: userData });
@@ -97,14 +93,33 @@ app.post("/login", async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, msg: "Server Error" }); }
 });
 
-// 📊 ACADEMIC & FILTERING ROUTES
+// 🔒 CHANGE PASSWORD ROUTE (Naya Feature)
+app.post("/change-password", async (req, res) => {
+    try {
+        const { userId, role, newPassword } = req.body;
+        const Model = (role.toLowerCase() === "student") ? Student : Teacher;
+        const user = await Model.findByIdAndUpdate(userId, { password: newPassword });
+        if (user) {
+            res.json({ success: true, msg: "Password Updated Successfully!" });
+        } else {
+            res.json({ success: false, msg: "User not found!" });
+        }
+    } catch (err) { res.status(500).json({ success: false, msg: "Server Error" }); }
+});
+
+// 📊 DATA ROUTES
+app.get("/students", async (req, res) => {
+    try { res.json(await Student.find()); } catch(e) { res.json([]); }
+});
+
+app.get("/teachers", async (req, res) => {
+    try { res.json(await Teacher.find()); } catch(e) { res.json([]); }
+});
+
 app.get("/teachers/filter", async (req, res) => {
     const { dept, sem } = req.query;
     try {
-        const teachers = await Teacher.find({ 
-            department: dept, 
-            semester: { $in: [sem] } 
-        }, { password: 0 });
+        const teachers = await Teacher.find({ department: dept, semester: { $in: [sem] } }, { password: 0 });
         res.json(teachers);
     } catch (err) { res.status(500).json([]); }
 });
@@ -113,7 +128,6 @@ app.post("/update-academics", async (req, res) => {
     try {
         const { studentId, attendance, marks } = req.body;
         const student = await Student.findById(studentId);
-        
         await Student.findByIdAndUpdate(studentId, { attendance, marks });
 
         if (Number(attendance) < 75) {
@@ -129,53 +143,24 @@ app.post("/update-academics", async (req, res) => {
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
-// 📚 NOTES & TEACHER TIMETABLE
+// 📚 NOTES & STATUS
 app.post("/notes", async (req, res) => {
     try {
         const newNote = new Notes(req.body);
-        // Fix: Changed newUser.save() to newNote.save()
         await newNote.save();
         res.json({ success: true, msg: "Shared Successfully!" });
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
-app.post("/teacher/timetable", async (req, res) => {
-    try {
-        const { teacherId, schedule } = req.body;
-        await Teacher.findByIdAndUpdate(teacherId, { ownTimetable: schedule });
-        res.json({ success: true, msg: "Schedule Updated!" });
-    } catch (err) { res.status(500).json({ success: false }); }
-});
-
 app.get("/notes", async (req, res) => {
-    try {
-        const notes = await Notes.find().sort({ date: -1 });
-        res.json(notes);
-    } catch (err) { res.status(500).json([]); }
+    try { res.json(await Notes.find().sort({ date: -1 })); } catch (err) { res.status(500).json([]); }
 });
 
-// 🏫 FACULTY STATUS & APPOINTMENTS
-app.post("/update-status", async (req, res) => {
-    const { teacherId, studentId, notificationId, newStatus } = req.body;
+app.post("/teacher/update-live-status", async (req, res) => {
     try {
-        await Teacher.updateOne(
-            { _id: teacherId, "notifications.id": Number(notificationId) },
-            { $set: { "notifications.$.status": newStatus } }
-        );
-
-        const student = await Student.findById(studentId);
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: student.email,
-            subject: `Appointment Update: ${newStatus}`,
-            text: `Hello ${student.name}, your appointment request has been ${newStatus}.`
-        };
-
-        await transporter.sendMail(mailOptions);
-        res.json({ success: true, message: "Email Sent!" });
-    } catch (err) {
-        res.status(500).json({ success: false });
-    }
+        await Teacher.findByIdAndUpdate(req.body.teacherId, { status: req.body.status });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false }); }
 });
 
 app.post("/send-request", async (req, res) => {
