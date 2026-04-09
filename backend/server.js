@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS // 16-digit App Password
+        pass: process.env.EMAIL_PASS 
     }
 });
 
@@ -27,17 +27,17 @@ mongoose.connect(dbURI)
     .then(() => console.log("✅ MongoDB Atlas Connected"))
     .catch(err => console.log("❌ DB Connection Error:", err));
 
-// 📝 SCHEMAS (Updated with Availability & Branch)
+// 📝 SCHEMAS
 const TeacherSchema = new mongoose.Schema({
     name: String, 
     universityId: String, 
     email: String, 
     password: String, 
-    department: String, // e.g., BCA, MCA
-    semester: [String],  // Teachers can teach multiple semesters e.g. ["1st", "6th"]
+    department: String,
+    semester: [String],
     status: { type: String, default: "Available" },
     notifications: { type: Array, default: [] },
-    ownTimetable: { type: Array, default: [] } // Array of {start: "HH:MM", end: "HH:MM"}
+    ownTimetable: { type: Array, default: [] }
 });
 
 const StudentSchema = new mongoose.Schema({
@@ -45,8 +45,8 @@ const StudentSchema = new mongoose.Schema({
     rollNo: String, 
     email: String, 
     password: String, 
-    department: String, // BCA/MCA
-    semester: String,   // 6th
+    department: String,
+    semester: String,
     attendance: { type: Number, default: 0 },
     marks: {
         st1: { type: Number, default: 0 },
@@ -70,7 +70,8 @@ const Notes = mongoose.model("Notes", NotesSchema);
 app.post("/signup", async (req, res) => {
     try {
         const { role, ...details } = req.body;
-        const Model = (role === "student") ? Student : Teacher;
+        // Case-insensitive role check
+        const Model = (role.toLowerCase() === "student") ? Student : Teacher;
         const newUser = new Model(details);
         await newUser.save();
         res.json({ success: true, msg: "Registration Successful!" });
@@ -80,21 +81,29 @@ app.post("/signup", async (req, res) => {
 app.post("/login", async (req, res) => {
     try {
         const { email, password, role } = req.body;
-        const Model = (role === "student") ? Student : Teacher;
+        // Fix: Case-insensitive role comparison
+        const lowerRole = role.toLowerCase();
+        const Model = (lowerRole === "student") ? Student : Teacher;
+        
         const user = await Model.findOne({ email, password });
-        if (user) res.json({ success: true, user });
-        else res.json({ success: false, msg: "Invalid Credentials!" });
+        if (user) {
+            // Send back user data without password for security
+            const userData = user.toObject();
+            delete userData.password;
+            res.json({ success: true, user: userData });
+        } else {
+            res.json({ success: false, msg: "Invalid Credentials!" });
+        }
     } catch (err) { res.status(500).json({ success: false, msg: "Server Error" }); }
 });
 
 // 📊 ACADEMIC & FILTERING ROUTES
-// Route to get ONLY teachers from student's own branch & semester
 app.get("/teachers/filter", async (req, res) => {
     const { dept, sem } = req.query;
     try {
         const teachers = await Teacher.find({ 
             department: dept, 
-            semester: { $in: [sem] } // Filters teachers teaching that semester
+            semester: { $in: [sem] } 
         }, { password: 0 });
         res.json(teachers);
     } catch (err) { res.status(500).json([]); }
@@ -107,7 +116,6 @@ app.post("/update-academics", async (req, res) => {
         
         await Student.findByIdAndUpdate(studentId, { attendance, marks });
 
-        // 🚨 Automatic Low Attendance Email
         if (Number(attendance) < 75) {
             const mailOptions = {
                 from: process.env.EMAIL_USER,
@@ -125,15 +133,15 @@ app.post("/update-academics", async (req, res) => {
 app.post("/notes", async (req, res) => {
     try {
         const newNote = new Notes(req.body);
-        await newUser.save();
+        // Fix: Changed newUser.save() to newNote.save()
+        await newNote.save();
         res.json({ success: true, msg: "Shared Successfully!" });
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
-// New Route for Teacher to upload their own Schedule
 app.post("/teacher/timetable", async (req, res) => {
     try {
-        const { teacherId, schedule } = req.body; // schedule is array of {start, end}
+        const { teacherId, schedule } = req.body;
         await Teacher.findByIdAndUpdate(teacherId, { ownTimetable: schedule });
         res.json({ success: true, msg: "Schedule Updated!" });
     } catch (err) { res.status(500).json({ success: false }); }
