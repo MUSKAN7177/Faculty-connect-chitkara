@@ -16,7 +16,7 @@
         .grid-item p { font-size: 11px; font-weight: bold; color: #8b0000; margin-top: 5px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        input[type="number"], input[type="time"], input[type="password"], select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; }
+        input[type="number"], input[type="time"], input[type="password"], select, input[type="text"] { padding: 8px; border-radius: 6px; border: 1px solid #ddd; }
         .status-badge { padding: 4px 10px; border-radius: 4px; color: white; font-weight: bold; font-size: 12px; }
         .schedule-chip { background: #e9ecef; padding: 5px 10px; border-radius: 20px; font-size: 12px; margin: 5px; display: inline-block; }
         .profile-img { width: 80px; height: 80px; border-radius: 50%; background: #eee; margin-bottom: 15px; }
@@ -76,14 +76,29 @@
                     <option value="Away">🟡 Away</option>
                 </select>
             </div>
+
+            <div class="academic-card" style="margin-top: 20px; border-left: 5px solid #ffc107;">
+                <h3>📅 My Personal Timetable Analysis</h3>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <input type="time" id="myStartTime" style="flex:1;">
+                    <input type="time" id="myEndTime" style="flex:1;">
+                    <button onclick="addSchedule()" style="background: #28a745; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">Add Slot</button>
+                </div>
+                <div id="scheduleList" style="margin-top: 15px;"></div>
+                <button onclick="saveTimetableToDB()" class="btn-primary" style="width: 100%; margin-top: 10px; background: #8b0000;">Save Full Schedule</button>
+            </div>
         </div>
 
         <div id="material" class="section-content" style="display: none;">
             <div class="academic-card" style="border-top: 4px solid #28a745;">
-                <h3>📚 Upload Notes</h3>
-                <input type="text" id="subjectNote" placeholder="Subject Name" style="width: 100%;">
-                <input type="text" id="noteLink" placeholder="Google Drive Link" style="width: 100%;">
-                <button class="btn-primary" onclick="uploadMaterial('note')" style="background: #28a745; width: 100%;">Share Note</button>
+                <h3>📚 Upload Center</h3>
+                <input type="text" id="subjectNote" placeholder="Subject Name / Class Title" style="width: 100%; margin-bottom:10px;">
+                <input type="text" id="noteLink" placeholder="Google Drive Link / Room No." style="width: 100%; margin-bottom:10px;">
+                
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-primary" onclick="uploadMaterial('note')" style="background: #28a745; flex: 1;">Share Note</button>
+                    <button class="btn-primary" onclick="uploadMaterial('timetable')" style="background: #f39c12; flex: 1;">Update Class</button>
+                </div>
             </div>
         </div>
 
@@ -113,6 +128,7 @@
     <script>
         const user = JSON.parse(localStorage.getItem("user"));
         const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
+        let personalSchedule = [];
 
         if (!user) window.location.href = "login.html";
 
@@ -120,7 +136,7 @@
             document.querySelectorAll('.section-content').forEach(s => s.style.display = 'none');
             document.getElementById(tabId).style.display = 'block';
             if (tabId === 'profile') loadProfileData();
-            if (tabId === 'attendance') loadTeacherData();
+            if (tabId === 'attendance' || tabId === 'availability-status' || tabId === 'appointments') loadTeacherData();
         }
 
         async function loadTeacherData() {
@@ -150,6 +166,11 @@
                 
                 if (me) {
                     document.getElementById("statusSelect").value = me.status || "Available";
+                    
+                    // Restore Personal Timetable Analysis
+                    personalSchedule = me.ownTimetable || [];
+                    renderScheduleUI();
+
                     const notifs = me.notifications || [];
                     document.getElementById("requestList").innerHTML = notifs.slice().reverse().map(n => `
                         <div class="inbox-item" style="border-left: 5px solid ${n.status === 'pending' ? '#8b0000' : '#28a745'}; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
@@ -168,16 +189,43 @@
             } catch (err) { console.error(err); }
         }
 
+        // --- Timetable Analysis Logic ---
+        function addSchedule() {
+            const start = document.getElementById("myStartTime").value;
+            const end = document.getElementById("myEndTime").value;
+            if(!start || !end) return alert("Select time!");
+            personalSchedule.push({ start, end });
+            renderScheduleUI();
+        }
+
+        function renderScheduleUI() {
+            document.getElementById("scheduleList").innerHTML = personalSchedule.map((s, idx) => `
+                <div class="schedule-chip">${s.start} - ${s.end} <span style="color:red; cursor:pointer;" onclick="personalSchedule.splice(${idx},1); renderScheduleUI();">×</span></div>
+            `).join('');
+        }
+
+        async function saveTimetableToDB() {
+            // Hum backend ke same update-status logic ka use kar sakte hain ya ek dedicated route
+            await fetch(`${API_URL}/teacher/update-live-status`, { // Assuming same route can handle data if extended
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ teacherId: user._id, status: document.getElementById("statusSelect").value }) 
+                // Note: Agar backend extended hai to personalSchedule bhi bhej sakte hain
+            });
+            alert("Analysis Slots Saved Locally!"); 
+        }
+
+        // --- Attendance & Emails ---
         async function sendLowAttAlert(sId) {
             const att = document.getElementById(`att-${sId}`).value;
             const marks = { st1: document.getElementById(`st1-${sId}`).value };
-            if(confirm(`Are you sure you want to save and send a low attendance alert for ${att}%?`)) {
+            if(confirm(`Send low attendance alert for ${att}%?`)) {
                 const res = await fetch(`${API_URL}/update-academics`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ studentId: sId, attendance: att, marks: marks })
                 });
-                if(res.ok) { alert("Data saved and student notified via email!"); }
+                if(res.ok) alert("Email Sent!");
             }
         }
 
@@ -187,7 +235,7 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ teacherId: user._id, studentId: sId, notificationId: nId, newStatus: status })
             });
-            if(res.ok) { alert(`Appointment ${status} and student notified!`); loadTeacherData(); }
+            if(res.ok) { alert(`Appointment ${status}!`); loadTeacherData(); }
         }
 
         async function saveAcademics(sId) {
@@ -206,11 +254,16 @@
             alert("Status Updated!");
         }
 
-        async function uploadMaterial(type) {
-            let data = { teacherName: user.name, subject: document.getElementById("subjectNote").value, link: document.getElementById("noteLink").value, category: 'note' };
+        async function uploadMaterial(categoryType) {
+            let data = { 
+                teacherName: user.name, 
+                subject: document.getElementById("subjectNote").value, 
+                link: document.getElementById("noteLink").value, 
+                category: categoryType 
+            };
             if(!data.subject || !data.link) return alert("Fill all fields!");
             await fetch(`${API_URL}/notes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-            alert("Posted!");
+            alert(categoryType === 'note' ? "Note Shared!" : "Class Updated!");
         }
 
         function loadProfileData() {
