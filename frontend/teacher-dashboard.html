@@ -76,16 +76,6 @@
                     <option value="Away">🟡 Away</option>
                 </select>
             </div>
-            <div class="academic-card" style="margin-top: 20px; border-left: 5px solid #ffc107;">
-                <h3>📅 My Personal Timetable</h3>
-                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <input type="time" id="myStartTime" style="flex:1;">
-                    <input type="time" id="myEndTime" style="flex:1;">
-                    <button onclick="addSchedule()" style="background: #28a745; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">Add Slot</button>
-                </div>
-                <div id="scheduleList" style="margin-top: 15px;"></div>
-                <button onclick="saveTimetableToDB()" class="btn-primary" style="width: 100%; margin-top: 10px; background: #8b0000;">Save Full Schedule</button>
-            </div>
         </div>
 
         <div id="material" class="section-content" style="display: none;">
@@ -123,7 +113,6 @@
     <script>
         const user = JSON.parse(localStorage.getItem("user"));
         const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
-        let personalSchedule = [];
 
         if (!user) window.location.href = "login.html";
 
@@ -131,12 +120,12 @@
             document.querySelectorAll('.section-content').forEach(s => s.style.display = 'none');
             document.getElementById(tabId).style.display = 'block';
             if (tabId === 'profile') loadProfileData();
+            if (tabId === 'attendance') loadTeacherData();
         }
 
         async function loadTeacherData() {
             try {
                 document.getElementById("tName").innerText = user.name;
-                
                 const resS = await fetch(`${API_URL}/students`);
                 const allStudents = await resS.json();
                 const myStudents = allStudents.filter(s => s.department?.toLowerCase() === user.department?.toLowerCase());
@@ -146,9 +135,12 @@
                     <tr>
                         <td>${s.name}</td>
                         <td>${s.rollNo || 'N/A'}</td>
-                        <td><input type="number" id="att-${s._id}" value="${s.attendance || 0}"></td>
-                        <td><input type="number" id="st1-${s._id}" value="${s.marks?.st1 || 0}"></td>
-                        <td><button class="btn-primary" style="padding: 5px 10px;" onclick="saveAcademics('${s._id}')">Save</button></td>
+                        <td><input type="number" id="att-${s._id}" value="${s.attendance || 0}" style="width:70px;"></td>
+                        <td><input type="number" id="st1-${s._id}" value="${s.marks?.st1 || 0}" style="width:70px;"></td>
+                        <td>
+                            <button class="btn-primary" style="padding: 5px 10px; font-size:12px;" onclick="saveAcademics('${s._id}')">Save</button>
+                            <button class="btn-primary" style="padding: 5px 10px; font-size:12px; background:#f39c12; margin-left:5px;" onclick="sendLowAttAlert('${s._id}')">⚠️ Alert</button>
+                        </td>
                     </tr>
                 `).join('') || "<tr><td colspan='5'>No students found.</td></tr>";
 
@@ -158,15 +150,12 @@
                 
                 if (me) {
                     document.getElementById("statusSelect").value = me.status || "Available";
-                    personalSchedule = me.ownTimetable || [];
-                    renderScheduleUI();
-                    
                     const notifs = me.notifications || [];
                     document.getElementById("requestList").innerHTML = notifs.slice().reverse().map(n => `
-                        <div class="inbox-item" style="border-left: 5px solid ${n.status === 'pending' ? '#8b0000' : '#28a745'}; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px; text-align: left;">
+                        <div class="inbox-item" style="border-left: 5px solid ${n.status === 'pending' ? '#8b0000' : '#28a745'}; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
                             <p><strong>From:</strong> ${n.studentName}</p>
                             <p><strong>Reason:</strong> ${n.message}</p>
-                            <p><strong>Status:</strong> <b>${n.status.toUpperCase()}</b></p>
+                            <p><strong>Status:</strong> <b style="color:${n.status==='Approved'?'green':'red'}">${n.status.toUpperCase()}</b></p>
                             ${n.status === 'pending' ? `
                                 <div style="margin-top: 10px;">
                                     <button onclick="respond('${n.studentId}', '${n.id}', 'Approved')" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Approve</button>
@@ -177,6 +166,51 @@
                     `).join('') || "No requests yet.";
                 }
             } catch (err) { console.error(err); }
+        }
+
+        async function sendLowAttAlert(sId) {
+            const att = document.getElementById(`att-${sId}`).value;
+            const marks = { st1: document.getElementById(`st1-${sId}`).value };
+            if(confirm(`Are you sure you want to save and send a low attendance alert for ${att}%?`)) {
+                const res = await fetch(`${API_URL}/update-academics`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ studentId: sId, attendance: att, marks: marks })
+                });
+                if(res.ok) { alert("Data saved and student notified via email!"); }
+            }
+        }
+
+        async function respond(sId, nId, status) {
+            const res = await fetch(`${API_URL}/update-status`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ teacherId: user._id, studentId: sId, notificationId: nId, newStatus: status })
+            });
+            if(res.ok) { alert(`Appointment ${status} and student notified!`); loadTeacherData(); }
+        }
+
+        async function saveAcademics(sId) {
+            const data = { studentId: sId, attendance: document.getElementById(`att-${sId}`).value, marks: { st1: document.getElementById(`st1-${sId}`).value } };
+            const res = await fetch(`${API_URL}/update-academics`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+            if(res.ok) alert("Record Saved!");
+        }
+
+        async function updateLiveStatus() {
+            const status = document.getElementById("statusSelect").value;
+            await fetch(`${API_URL}/teacher/update-live-status`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ teacherId: user._id, status: status })
+            });
+            alert("Status Updated!");
+        }
+
+        async function uploadMaterial(type) {
+            let data = { teacherName: user.name, subject: document.getElementById("subjectNote").value, link: document.getElementById("noteLink").value, category: 'note' };
+            if(!data.subject || !data.link) return alert("Fill all fields!");
+            await fetch(`${API_URL}/notes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+            alert("Posted!");
         }
 
         function loadProfileData() {
@@ -195,61 +229,6 @@
                 body: JSON.stringify({ userId: user._id, role: "teacher", newPassword: newPass })
             });
             if(res.ok) { alert("Password Updated!"); document.getElementById("tNewPass").value = ""; }
-        }
-
-        async function updateLiveStatus() {
-            const status = document.getElementById("statusSelect").value;
-            await fetch(`${API_URL}/teacher/update-live-status`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ teacherId: user._id, status: status })
-            });
-            alert("Status Updated!");
-        }
-
-        function addSchedule() {
-            const start = document.getElementById("myStartTime").value;
-            const end = document.getElementById("myEndTime").value;
-            if(!start || !end) return alert("Select time!");
-            personalSchedule.push({ start, end });
-            renderScheduleUI();
-        }
-
-        function renderScheduleUI() {
-            document.getElementById("scheduleList").innerHTML = personalSchedule.map((s, idx) => `
-                <div class="schedule-chip">${s.start} - ${s.end} <span style="color:red; cursor:pointer;" onclick="personalSchedule.splice(${idx},1); renderScheduleUI();">×</span></div>
-            `).join('');
-        }
-
-        async function saveTimetableToDB() {
-            await fetch(`${API_URL}/teacher/timetable`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ teacherId: user._id, schedule: personalSchedule })
-            });
-            alert("Timetable Saved!");
-        }
-
-        async function respond(sId, nId, status) {
-            const res = await fetch(`${API_URL}/update-status`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ teacherId: user._id, studentId: sId, notificationId: nId, newStatus: status })
-            });
-            if(res.ok) { alert(`Appointment ${status}!`); loadTeacherData(); }
-        }
-
-        async function uploadMaterial(type) {
-            let data = { teacherName: user.name, subject: document.getElementById("subjectNote").value, link: document.getElementById("noteLink").value, category: 'note' };
-            if(!data.subject || !data.link) return alert("Fill all fields!");
-            await fetch(`${API_URL}/notes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-            alert("Posted!");
-        }
-
-        async function saveAcademics(sId) {
-            const data = { studentId: sId, attendance: document.getElementById(`att-${sId}`).value, marks: { st1: document.getElementById(`st1-${sId}`).value } };
-            await fetch(`${API_URL}/update-academics`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-            alert("Data Saved!");
         }
 
         function logout() { localStorage.clear(); window.location.href="role.html"; }

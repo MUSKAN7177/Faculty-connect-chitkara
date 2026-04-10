@@ -64,8 +64,8 @@
                         <div class="card-value"><span id="myST1">0</span></div>
                     </div>
                 </div>
-                <div class="prog-container" style="background:#eee; border-radius:10px; height:20px; margin-top:10px;">
-                    <div id="barVisual" class="prog-bar" style="width: 0%; height:100%; text-align:center; color:white; border-radius:10px;">0%</div>
+                <div class="prog-container" style="background:#eee; border-radius:10px; height:20px; margin-top:20px;">
+                    <div id="barVisual" class="prog-bar" style="width: 0%; height:100%; text-align:center; color:white; border-radius:10px; transition: 1s;">0%</div>
                 </div>
             </div>
         </div>
@@ -83,8 +83,9 @@
                 <h3>Connect with Faculty</h3>
                 <label>Select Teacher:</label>
                 <select id="teacherSelect" style="margin-bottom:10px;"></select>
-                <textarea id="msg" placeholder="Reason for meeting..." style="margin-bottom:10px;"></textarea>
+                <textarea id="msg" placeholder="Reason for meeting..." style="margin-bottom:10px; height: 100px;"></textarea>
                 <button class="btn-primary" onclick="sendRequest()" style="width:100%;">Book Appointment</button>
+                <button class="btn-primary" onclick="showTab('availability')" style="width:100%; margin-top:10px; background:#666;">Back</button>
             </div>
         </div>
 
@@ -108,13 +109,13 @@
                 <h3 id="pName">Student Name</h3>
                 <p id="pEmail" style="color: #666;"></p>
                 <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
-                <div style="text-align: left; font-size: 14px;">
+                <div style="text-align: left; font-size: 14px; padding: 0 20px;">
                     <p><strong>Roll No:</strong> <span id="pRoll"></span></p>
                     <p><strong>Department:</strong> <span id="pDept"></span></p>
                 </div>
-                <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 10px;">
-                    <h4>Change Password</h4>
-                    <input type="password" id="sNewPass" placeholder="Enter New Password" style="margin-top: 10px;">
+                <div style="margin-top: 20px; padding: 20px; background: #fdfdfd; border: 1px solid #eee; border-radius: 12px;">
+                    <h4>Security</h4>
+                    <input type="password" id="sNewPass" placeholder="New Password" style="margin-top: 10px;">
                     <button class="btn-primary" onclick="changeStudentPass()" style="width: 100%; margin-top: 10px;">Update Password</button>
                 </div>
             </div>
@@ -132,7 +133,7 @@
         if (!user) window.location.href = "login.html";
         document.getElementById("welcomeText").innerText = `Welcome, ${user.name}`;
         if(document.getElementById("branchInfo")) {
-            document.getElementById("branchInfo").innerText = `Branch: ${user.department}`;
+            document.getElementById("branchInfo").innerText = `My Branch: ${user.department}`;
         }
 
         function showTab(tabId) {
@@ -144,24 +145,6 @@
             if (tabId === 'timetable') loadDetailedTimetable();
             if (tabId === 'availability') loadFilteredFaculty();
             if (tabId === 'profile') loadProfileData();
-        }
-
-        function loadProfileData() {
-            document.getElementById("pName").innerText = user.name;
-            document.getElementById("pEmail").innerText = user.email;
-            document.getElementById("pRoll").innerText = user.rollNo || "N/A";
-            document.getElementById("pDept").innerText = user.department;
-        }
-
-        async function changeStudentPass() {
-            const newPass = document.getElementById("sNewPass").value;
-            if(!newPass) return alert("Please enter a password!");
-            const res = await fetch(`${API_URL}/change-password`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userId: user._id, role: "student", newPassword: newPass })
-            });
-            if(res.ok) { alert("Password Updated!"); document.getElementById("sNewPass").value = ""; }
         }
 
         async function loadERPData() {
@@ -176,27 +159,29 @@
                     const bar = document.getElementById("barVisual");
                     bar.style.width = att + "%";
                     bar.innerText = att + "%";
-                    bar.style.background = att < 75 ? "#dc3545" : "#28a745";
+                    // Color Logic: 75 se kam hai toh red, varna green
+                    bar.style.background = att < 75 ? "#e74c3c" : "#27ae60";
                 }
-            } catch(e) { console.log(e); }
+            } catch(e) { console.error("Error loading ERP data:", e); }
         }
 
         async function loadFilteredFaculty() {
             try {
                 const res = await fetch(`${API_URL}/teachers`);
                 const teachers = await res.json();
+                // Filter teachers by department
                 const myFaculty = teachers.filter(t => t.department?.toLowerCase() === user.department?.toLowerCase());
 
                 const listDiv = document.getElementById("filteredTeacherList");
                 listDiv.innerHTML = myFaculty.map(t => `
-                    <div class="period-card" style="border-left-color: ${t.status === 'Available' ? '#28a745' : '#dc3545'}">
+                    <div class="period-card" style="border-left-color: ${t.status === 'Available' ? '#27ae60' : (t.status === 'Away' ? '#f39c12' : '#e74c3c')}">
                         <div>
                             <strong>${t.name}</strong> <br>
-                            <span class="status-badge" style="background: ${t.status === 'Available' ? '#28a745' : (t.status === 'Away' ? '#ffc107' : '#dc3545')}">
+                            <span class="status-badge" style="background: ${t.status === 'Available' ? '#27ae60' : (t.status === 'Away' ? '#f39c12' : '#e74c3c')}">
                                 ${t.status || 'Available'}
                             </span>
                         </div>
-                        <button class="btn-primary" onclick="openBookingTab('${t._id}')" style="width: auto; padding: 5px 12px; font-size: 11px;">Book</button>
+                        <button class="btn-primary" onclick="openBookingTab('${t._id}')" style="width: auto; padding: 5px 12px; font-size: 11px;">Book Appointment</button>
                     </div>
                 `).join('') || "<p>No faculty found for your branch.</p>";
             } catch (err) { console.error(err); }
@@ -215,16 +200,27 @@
             dropdown.innerHTML = myFaculty.map(t => `<option value="${t._id}" ${t._id === selectedId ? 'selected' : ''}>${t.name}</option>`).join('');
         }
 
-        async function loadDetailedTimetable() {
-            const res = await fetch(`${API_URL}/notes`);
-            const data = await res.json();
-            const schedule = data.filter(item => item.category === 'timetable');
-            document.getElementById("detailedTimetable").innerHTML = schedule.map((cls) => `
-                <div class="period-card">
-                    <div><strong>${cls.subject}</strong> <br><small>Location: ${cls.link}</small></div>
-                    <div style="text-align: right;"><small>Prof. ${cls.teacherName}</small></div>
-                </div>
-            `).join('') || "<p>No classes scheduled today.</p>";
+        async function sendRequest() {
+            const tId = document.getElementById("teacherSelect").value;
+            const msg = document.getElementById("msg").value;
+            if(!msg) return alert("Please enter a reason!");
+            
+            const res = await fetch(`${API_URL}/send-request`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    teacherId: tId, 
+                    studentName: user.name, 
+                    studentId: user._id, 
+                    message: msg 
+                })
+            });
+            
+            if(res.ok) { 
+                alert("Request Sent! You will receive an email once the faculty responds."); 
+                document.getElementById("msg").value = ""; 
+                showTab('availability'); 
+            }
         }
 
         async function loadMaterial() {
@@ -232,24 +228,30 @@
             const data = await res.json();
             const notes = data.filter(item => item.category === 'note');
             document.getElementById("notesInbox").innerHTML = notes.map(item => `
-                <div class="inbox-item" style="border-left: 5px solid #8b0000; margin-bottom:10px; padding:15px; background:#f9f9f9; border-radius:8px;">
+                <div class="inbox-item" style="border-left: 5px solid #8b0000; margin-bottom:10px; padding:15px; background:#fff; border: 1px solid #eee; border-radius:8px;">
                     <strong>${item.subject}</strong> <br>
-                    <a href="${item.link}" target="_blank" style="color:#007bff; font-size:13px;">View Resource</a>
-                    <br><small>Uploaded by Prof. ${item.teacherName}</small>
+                    <a href="${item.link}" target="_blank" style="color:#2980b9; font-size:13px; font-weight:bold;">🔗 View Resource</a>
+                    <br><small style="color:#666;">Uploaded by Prof. ${item.teacherName}</small>
                 </div>
             `).join('') || "<p>No resources available.</p>";
         }
 
-        async function sendRequest() {
-            const tId = document.getElementById("teacherSelect").value;
-            const msg = document.getElementById("msg").value;
-            if(!msg) return alert("Please enter a reason!");
-            const res = await fetch(`${API_URL}/send-request`, {
+        function loadProfileData() {
+            document.getElementById("pName").innerText = user.name;
+            document.getElementById("pEmail").innerText = user.email;
+            document.getElementById("pRoll").innerText = user.rollNo || "N/A";
+            document.getElementById("pDept").innerText = user.department;
+        }
+
+        async function changeStudentPass() {
+            const newPass = document.getElementById("sNewPass").value;
+            if(!newPass) return alert("Please enter a password!");
+            const res = await fetch(`${API_URL}/change-password`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ teacherId: tId, studentName: user.name, studentId: user._id, message: msg })
+                body: JSON.stringify({ userId: user._id, role: "student", newPassword: newPass })
             });
-            if(res.ok) { alert("Request Sent!"); document.getElementById("msg").value = ""; showTab('availability'); }
+            if(res.ok) { alert("Password Updated Successfully!"); document.getElementById("sNewPass").value = ""; }
         }
 
         function logout() { localStorage.clear(); window.location.href="role.html"; }

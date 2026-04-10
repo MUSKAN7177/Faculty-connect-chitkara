@@ -9,6 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // 📧 Nodemailer Setup
+// Note: Make sure process.env.EMAIL_PASS has your 16-character App Password
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -35,7 +36,7 @@ const TeacherSchema = new mongoose.Schema({
     department: String,
     semester: [String],
     status: { type: String, default: "Available" },
-    notifications: { type: Array, default: [] },
+    notifications: { type: Array, default: [] }, // Array of appointment objects
     ownTimetable: { type: Array, default: [] }
 });
 
@@ -93,7 +94,6 @@ app.post("/login", async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, msg: "Server Error" }); }
 });
 
-// 🔒 CHANGE PASSWORD ROUTE (Naya Feature)
 app.post("/change-password", async (req, res) => {
     try {
         const { userId, role, newPassword } = req.body;
@@ -107,7 +107,81 @@ app.post("/change-password", async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, msg: "Server Error" }); }
 });
 
-// 📊 DATA ROUTES
+// 📊 ACADEMIC ROUTES (Attendance & Email Alerts)
+app.post("/update-academics", async (req, res) => {
+    try {
+        const { studentId, attendance, marks } = req.body;
+        const student = await Student.findById(studentId);
+        
+        await Student.findByIdAndUpdate(studentId, { attendance, marks });
+
+        // Trigger email if attendance is low
+        if (student && Number(attendance) < 75) {
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: student.email,
+                subject: "⚠️ Low Attendance Alert: Faculty Connect",
+                text: `Hi ${student.name},\n\nYour current attendance is ${attendance}%. As per university rules, it must be above 75%. Please meet your HOD.\n\nRegards,\nFaculty Connect Team`
+            };
+            await transporter.sendMail(mailOptions);
+        }
+        res.json({ success: true, msg: "Records updated and processed!" });
+    } catch (err) { 
+        console.error("Academics Error:", err);
+        res.status(500).json({ success: false }); 
+    }
+});
+
+// 📩 APPOINTMENT & STATUS ROUTES
+app.post("/send-request", async (req, res) => {
+    try {
+        const { teacherId, studentName, studentId, message } = req.body;
+        await Teacher.findByIdAndUpdate(teacherId, { 
+            $push: { notifications: { studentName, studentId, message, status: "pending", id: Date.now() } } 
+        });
+        res.json({ success: true, msg: "Request Sent to Faculty!" });
+    } catch (err) { res.status(500).json({ success: false }); }
+});
+
+// NEW: Update Appointment Status & Send Confirmation Email
+app.post("/update-status", async (req, res) => {
+    const { teacherId, studentId, notificationId, newStatus } = req.body;
+    try {
+        // 1. Update the notification status inside Teacher document
+        await Teacher.updateOne(
+            { _id: teacherId, "notifications.id": Number(notificationId) },
+            { $set: { "notifications.$.status": newStatus } }
+        );
+
+        // 2. Fetch student details to send email
+        const student = await Student.findById(studentId);
+        
+        if (student && student.email) {
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: student.email,
+                subject: `Faculty Connect: Appointment ${newStatus}`,
+                text: `Hello ${student.name},\n\nYour meeting request has been ${newStatus} by the faculty.\n\nPlease check your student dashboard for details.\n\nRegards,\nFaculty Connect Team`
+            };
+            await transporter.sendMail(mailOptions);
+            res.json({ success: true, message: "Status updated and student notified via email!" });
+        } else {
+            res.json({ success: true, message: "Status updated locally (Email not found)." });
+        }
+    } catch (err) {
+        console.error("Status Update Error:", err);
+        res.status(500).json({ success: false, msg: "Server Error" });
+    }
+});
+
+app.post("/teacher/update-live-status", async (req, res) => {
+    try {
+        await Teacher.findByIdAndUpdate(req.body.teacherId, { status: req.body.status });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false }); }
+});
+
+// 📚 DATA FETCH ROUTES
 app.get("/students", async (req, res) => {
     try { res.json(await Student.find()); } catch(e) { res.json([]); }
 });
@@ -116,34 +190,6 @@ app.get("/teachers", async (req, res) => {
     try { res.json(await Teacher.find()); } catch(e) { res.json([]); }
 });
 
-app.get("/teachers/filter", async (req, res) => {
-    const { dept, sem } = req.query;
-    try {
-        const teachers = await Teacher.find({ department: dept, semester: { $in: [sem] } }, { password: 0 });
-        res.json(teachers);
-    } catch (err) { res.status(500).json([]); }
-});
-
-app.post("/update-academics", async (req, res) => {
-    try {
-        const { studentId, attendance, marks } = req.body;
-        const student = await Student.findById(studentId);
-        await Student.findByIdAndUpdate(studentId, { attendance, marks });
-
-        if (Number(attendance) < 75) {
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: student.email,
-                subject: "⚠️ Low Attendance Alert: Faculty Connect",
-                text: `Hi ${student.name}, your attendance is ${attendance}%. It must be above 75%.`
-            };
-            await transporter.sendMail(mailOptions);
-        }
-        res.json({ success: true, msg: "Records updated!" });
-    } catch (err) { res.status(500).json({ success: false }); }
-});
-
-// 📚 NOTES & STATUS
 app.post("/notes", async (req, res) => {
     try {
         const newNote = new Notes(req.body);
@@ -156,23 +202,6 @@ app.get("/notes", async (req, res) => {
     try { res.json(await Notes.find().sort({ date: -1 })); } catch (err) { res.status(500).json([]); }
 });
 
-app.post("/teacher/update-live-status", async (req, res) => {
-    try {
-        await Teacher.findByIdAndUpdate(req.body.teacherId, { status: req.body.status });
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ success: false }); }
-});
-
-app.post("/send-request", async (req, res) => {
-    try {
-        const { teacherId, studentName, studentId, message } = req.body;
-        await Teacher.findByIdAndUpdate(teacherId, { 
-            $push: { notifications: { studentName, studentId, message, status: "pending", id: Date.now() } } 
-        });
-        res.json({ success: true, msg: "Request Sent!" });
-    } catch (err) { res.status(500).json({ success: false }); }
-});
-
-// 🚀 SERVER
+// 🚀 SERVER START
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));
