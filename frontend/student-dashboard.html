@@ -22,6 +22,11 @@
         .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; color: white; font-weight: bold; }
         .profile-img { width: 80px; height: 80px; border-radius: 50%; background: #eee; margin-bottom: 15px; }
         input[type="password"], textarea, select { padding: 10px; border-radius: 6px; border: 1px solid #ddd; width: 100%; }
+        
+        /* New Table Styling for Marks */
+        .marks-table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; border-radius: 8px; overflow: hidden; }
+        .marks-table th { background: #8b0000; color: white; padding: 12px; text-align: left; }
+        .marks-table td { padding: 12px; border-bottom: 1px solid #eee; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -53,19 +58,32 @@
 
         <div id="academics" class="section-content active">
             <div class="academic-card">
-                <h3>My Current Status</h3>
-                <div class="dashboard-grid">
-                    <div class="erp-card">
-                        <div class="card-title">Attendance</div>
-                        <div class="card-value"><span id="myAttVal">0</span>%</div>
+                <h3>My Academic Overview</h3>
+                <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="erp-card" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center;">
+                        <div class="card-title" style="color: #666; font-size: 14px;">Total Attendance</div>
+                        <div class="card-value" style="font-size: 32px; font-weight: bold; color: #8b0000;"><span id="myAttVal">0</span>%</div>
+                        <div class="prog-container" style="background:#eee; border-radius:10px; height:12px; margin-top:10px;">
+                            <div id="barVisual" class="prog-bar" style="width: 0%; height:100%; border-radius:10px; transition: 1s;"></div>
+                        </div>
                     </div>
-                    <div class="erp-card">
-                        <div class="card-title">ST1 Marks</div>
-                        <div class="card-value"><span id="myST1">0</span></div>
+                    
+                    <div class="erp-card" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <table class="marks-table" style="margin-top: 0;">
+                            <thead>
+                                <tr>
+                                    <th>Assessment</th>
+                                    <th>Marks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Sessional Test 1 (ST1)</td><td id="m-st1">0</td></tr>
+                                <tr><td>Sessional Test 2 (ST2)</td><td id="m-st2">0</td></tr>
+                                <tr><td>Assignments</td><td id="m-assignment">0</td></tr>
+                                <tr><td>Final Examination</td><td id="m-final">0</td></tr>
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-                <div class="prog-container" style="background:#eee; border-radius:10px; height:20px; margin-top:20px;">
-                    <div id="barVisual" class="prog-bar" style="width: 0%; height:100%; text-align:center; color:white; border-radius:10px; transition: 1s;">0%</div>
                 </div>
             </div>
         </div>
@@ -153,14 +171,19 @@
                 const students = await res.json();
                 const me = students.find(s => s._id === user._id);
                 if (me) {
+                    // Attendance Logic
                     const att = me.attendance || 0;
                     document.getElementById("myAttVal").innerText = att;
-                    document.getElementById("myST1").innerText = me.marks?.st1 || 0;
                     const bar = document.getElementById("barVisual");
                     bar.style.width = att + "%";
-                    bar.innerText = att + "%";
-                    // Color Logic: 75 se kam hai toh red, varna green
                     bar.style.background = att < 75 ? "#e74c3c" : "#27ae60";
+
+                    // Marks Logic (Multiple Categories)
+                    const m = me.marks || {};
+                    document.getElementById("m-st1").innerText = m.st1 || 0;
+                    document.getElementById("m-st2").innerText = m.st2 || 0;
+                    document.getElementById("m-assignment").innerText = m.assignment || 0;
+                    document.getElementById("m-final").innerText = m.final || 0;
                 }
             } catch(e) { console.error("Error loading ERP data:", e); }
         }
@@ -169,7 +192,6 @@
             try {
                 const res = await fetch(`${API_URL}/teachers`);
                 const teachers = await res.json();
-                // Filter teachers by department
                 const myFaculty = teachers.filter(t => t.department?.toLowerCase() === user.department?.toLowerCase());
 
                 const listDiv = document.getElementById("filteredTeacherList");
@@ -234,6 +256,23 @@
                     <br><small style="color:#666;">Uploaded by Prof. ${item.teacherName}</small>
                 </div>
             `).join('') || "<p>No resources available.</p>";
+        }
+
+        async function loadDetailedTimetable() {
+            try {
+                const res = await fetch(`${API_URL}/notes`);
+                const data = await res.json();
+                const tt = data.filter(item => item.category === 'timetable');
+                document.getElementById("detailedTimetable").innerHTML = tt.map(item => `
+                    <div class="period-card" style="border-left-color: #f39c12;">
+                        <div>
+                            <strong>${item.subject}</strong> <br>
+                            <small>Venue/Link: ${item.link}</small>
+                        </div>
+                        <span style="font-size:11px; color:#666;">By Prof. ${item.teacherName}</span>
+                    </div>
+                `).join('') || "<p>No class updates for today.</p>";
+            } catch(e) { console.error(e); }
         }
 
         function loadProfileData() {

@@ -20,6 +20,18 @@
         .status-badge { padding: 4px 10px; border-radius: 4px; color: white; font-weight: bold; font-size: 12px; }
         .schedule-chip { background: #e9ecef; padding: 5px 10px; border-radius: 20px; font-size: 12px; margin: 5px; display: inline-block; }
         .profile-img { width: 80px; height: 80px; border-radius: 50%; background: #eee; margin-bottom: 15px; }
+        
+        /* Marks Selector Styling */
+        .marks-filter {
+            background: #fdf2f2;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid #ffcccc;
+        }
     </style>
 </head>
 <body>
@@ -52,8 +64,27 @@
         <div id="attendance" class="section-content active">
             <div class="academic-card">
                 <h3>Update Student Records</h3>
+                
+                <div class="marks-filter">
+                    <label><strong>Select Assessment:</strong></label>
+                    <select id="marksCategory" onchange="loadTeacherData()">
+                        <option value="st1">Sessional Test 1 (ST1)</option>
+                        <option value="st2">Sessional Test 2 (ST2)</option>
+                        <option value="assignment">Assignment Marks</option>
+                        <option value="final">Final Exam Marks</option>
+                    </select>
+                </div>
+
                 <table>
-                    <thead><tr><th>Name</th><th>Roll No</th><th>Attendance %</th><th>ST1</th><th>Action</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Roll No</th>
+                            <th>Attendance %</th>
+                            <th id="marksLabel">ST1 Marks</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
                     <tbody id="studentBody"></tbody>
                 </table>
             </div>
@@ -141,7 +172,10 @@
 
         async function loadTeacherData() {
             try {
+                const category = document.getElementById("marksCategory").value;
+                document.getElementById("marksLabel").innerText = document.getElementById("marksCategory").options[document.getElementById("marksCategory").selectedIndex].text;
                 document.getElementById("tName").innerText = user.name;
+                
                 const resS = await fetch(`${API_URL}/students`);
                 const allStudents = await resS.json();
                 const myStudents = allStudents.filter(s => s.department?.toLowerCase() === user.department?.toLowerCase());
@@ -152,7 +186,7 @@
                         <td>${s.name}</td>
                         <td>${s.rollNo || 'N/A'}</td>
                         <td><input type="number" id="att-${s._id}" value="${s.attendance || 0}" style="width:70px;"></td>
-                        <td><input type="number" id="st1-${s._id}" value="${s.marks?.st1 || 0}" style="width:70px;"></td>
+                        <td><input type="number" id="marks-${s._id}" value="${s.marks ? (s.marks[category] || 0) : 0}" style="width:70px;"></td>
                         <td>
                             <button class="btn-primary" style="padding: 5px 10px; font-size:12px;" onclick="saveAcademics('${s._id}')">Save</button>
                             <button class="btn-primary" style="padding: 5px 10px; font-size:12px; background:#f39c12; margin-left:5px;" onclick="sendLowAttAlert('${s._id}')">⚠️ Alert</button>
@@ -166,11 +200,8 @@
                 
                 if (me) {
                     document.getElementById("statusSelect").value = me.status || "Available";
-                    
-                    // Restore Personal Timetable Analysis
                     personalSchedule = me.ownTimetable || [];
                     renderScheduleUI();
-
                     const notifs = me.notifications || [];
                     document.getElementById("requestList").innerHTML = notifs.slice().reverse().map(n => `
                         <div class="inbox-item" style="border-left: 5px solid ${n.status === 'pending' ? '#8b0000' : '#28a745'}; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
@@ -189,7 +220,27 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- Timetable Analysis Logic ---
+        async function saveAcademics(sId) {
+            const category = document.getElementById("marksCategory").value;
+            const marksVal = document.getElementById(`marks-${sId}`).value;
+            const attVal = document.getElementById(`att-${sId}`).value;
+
+            // Creating dynamic marks object
+            const data = { 
+                studentId: sId, 
+                attendance: attVal, 
+                marks: { [category]: marksVal } 
+            };
+
+            const res = await fetch(`${API_URL}/update-academics`, { 
+                method: "POST", 
+                headers: { "Content-Type": "application/json" }, 
+                body: JSON.stringify(data) 
+            });
+            if(res.ok) alert(`${category.toUpperCase()} Record Saved!`);
+        }
+
+        // --- Timetable, Status & Other Functions ---
         function addSchedule() {
             const start = document.getElementById("myStartTime").value;
             const end = document.getElementById("myEndTime").value;
@@ -205,20 +256,18 @@
         }
 
         async function saveTimetableToDB() {
-            // Hum backend ke same update-status logic ka use kar sakte hain ya ek dedicated route
-            await fetch(`${API_URL}/teacher/update-live-status`, { // Assuming same route can handle data if extended
+            await fetch(`${API_URL}/teacher/update-live-status`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ teacherId: user._id, status: document.getElementById("statusSelect").value }) 
-                // Note: Agar backend extended hai to personalSchedule bhi bhej sakte hain
+                body: JSON.stringify({ teacherId: user._id, status: document.getElementById("statusSelect").value })
             });
-            alert("Analysis Slots Saved Locally!"); 
+            alert("Analysis Slots Saved!"); 
         }
 
-        // --- Attendance & Emails ---
         async function sendLowAttAlert(sId) {
+            const category = document.getElementById("marksCategory").value;
             const att = document.getElementById(`att-${sId}`).value;
-            const marks = { st1: document.getElementById(`st1-${sId}`).value };
+            const marks = { [category]: document.getElementById(`marks-${sId}`).value };
             if(confirm(`Send low attendance alert for ${att}%?`)) {
                 const res = await fetch(`${API_URL}/update-academics`, {
                     method: "POST",
@@ -236,12 +285,6 @@
                 body: JSON.stringify({ teacherId: user._id, studentId: sId, notificationId: nId, newStatus: status })
             });
             if(res.ok) { alert(`Appointment ${status}!`); loadTeacherData(); }
-        }
-
-        async function saveAcademics(sId) {
-            const data = { studentId: sId, attendance: document.getElementById(`att-${sId}`).value, marks: { st1: document.getElementById(`st1-${sId}`).value } };
-            const res = await fetch(`${API_URL}/update-academics`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-            if(res.ok) alert("Record Saved!");
         }
 
         async function updateLiveStatus() {
