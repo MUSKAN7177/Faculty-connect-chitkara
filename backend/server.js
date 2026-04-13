@@ -8,24 +8,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Verify connection configuration
+// 📧 Final Nodemailer Setup (Using Port 587 for Render Stability)
 const transporter = nodemailer.createTransport({
-    // Direct IPv4 address for Gmail SMTP
-    host: '173.194.76.108', 
-    port: 465,
-    secure: true, 
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Port 587 ke liye hamesha false rakhein
     auth: {
         user: process.env.EMAIL_USER || "muskan7177.ca23@chitkara.edu.in",
         pass: process.env.EMAIL_PASS || "ntwnciimormgudgg" 
     },
     tls: {
-        // This ensures the certificate matches gmail.com even if we use the IP
-        servername: 'smtp.gmail.com',
-        rejectUnauthorized: false 
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2'
     },
-    connectionTimeout: 20000, // 20 seconds
-    greetingTimeout: 20000
+    connectionTimeout: 30000, // 30 seconds wait time
+    greetingTimeout: 30000
 });
+
 // Verify connection configuration
 transporter.verify(function (error, success) {
     if (error) {
@@ -34,6 +33,7 @@ transporter.verify(function (error, success) {
         console.log("✅ Nodemailer is ready to send emails");
     }
 });
+
 app.get("/", (req, res) => res.send("Backend is Running Successfully!"));
 
 // 🔗 Database Connection
@@ -110,7 +110,7 @@ app.post("/login", async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, msg: "Server Error" }); }
 });
 
-// 📊 ACADEMIC ROUTES (Attendance Alert Fix)
+// 📊 ACADEMIC ROUTES
 app.post("/update-academics", async (req, res) => {
     try {
         const { studentId, attendance, marks } = req.body;
