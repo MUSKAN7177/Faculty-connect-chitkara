@@ -8,13 +8,28 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 📧 Nodemailer Setup
-// Note: Make sure process.env.EMAIL_PASS has your 16-character App Password
+// 📧 Nodemailer Setup (Updated for better stability on Render)
 const transporter = nodemailer.createTransport({
     service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, 
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS 
+        // Agar .env kaam nahi kar raha, toh yahan direct email/pass daal kar test karein
+        user: process.env.EMAIL_USER || "muskan7177.ca23@chitkara.edu.in",
+        pass: process.env.EMAIL_PASS || "ntwnciimormgudgg" 
+    },
+    tls: {
+        rejectUnauthorized: false // Isse connection errors kam hote hain
+    }
+});
+
+// Verify connection configuration
+transporter.verify(function (error, success) {
+    if (error) {
+        console.log("❌ Nodemailer Verification Error:", error);
+    } else {
+        console.log("✅ Nodemailer is ready to send emails");
     }
 });
 
@@ -36,7 +51,7 @@ const TeacherSchema = new mongoose.Schema({
     department: String,
     semester: [String],
     status: { type: String, default: "Available" },
-    notifications: { type: Array, default: [] }, // Array of appointment objects
+    notifications: { type: Array, default: [] }, 
     ownTimetable: { type: Array, default: [] }
 });
 
@@ -94,20 +109,7 @@ app.post("/login", async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, msg: "Server Error" }); }
 });
 
-app.post("/change-password", async (req, res) => {
-    try {
-        const { userId, role, newPassword } = req.body;
-        const Model = (role.toLowerCase() === "student") ? Student : Teacher;
-        const user = await Model.findByIdAndUpdate(userId, { password: newPassword });
-        if (user) {
-            res.json({ success: true, msg: "Password Updated Successfully!" });
-        } else {
-            res.json({ success: false, msg: "User not found!" });
-        }
-    } catch (err) { res.status(500).json({ success: false, msg: "Server Error" }); }
-});
-
-// 📊 ACADEMIC ROUTES (Attendance & Email Alerts)
+// 📊 ACADEMIC ROUTES (Attendance Alert Fix)
 app.post("/update-academics", async (req, res) => {
     try {
         const { studentId, attendance, marks } = req.body;
@@ -115,15 +117,18 @@ app.post("/update-academics", async (req, res) => {
         
         await Student.findByIdAndUpdate(studentId, { attendance, marks });
 
-        // Trigger email if attendance is low
         if (student && Number(attendance) < 75) {
             const mailOptions = {
-                from: process.env.EMAIL_USER,
+                from: process.env.EMAIL_USER || "muskan7177.ca23@chitkara.edu.in",
                 to: student.email,
                 subject: "⚠️ Low Attendance Alert: Faculty Connect",
                 text: `Hi ${student.name},\n\nYour current attendance is ${attendance}%. As per university rules, it must be above 75%. Please meet your HOD.\n\nRegards,\nFaculty Connect Team`
             };
-            await transporter.sendMail(mailOptions);
+            
+            transporter.sendMail(mailOptions, (error, info) => {
+                if (error) console.log("❌ Attendance Email Error:", error);
+                else console.log("✅ Attendance Email Sent:", info.response);
+            });
         }
         res.json({ success: true, msg: "Records updated and processed!" });
     } catch (err) { 
@@ -132,53 +137,38 @@ app.post("/update-academics", async (req, res) => {
     }
 });
 
-// 📩 APPOINTMENT & STATUS ROUTES
-app.post("/send-request", async (req, res) => {
-    try {
-        const { teacherId, studentName, studentId, message } = req.body;
-        await Teacher.findByIdAndUpdate(teacherId, { 
-            $push: { notifications: { studentName, studentId, message, status: "pending", id: Date.now() } } 
-        });
-        res.json({ success: true, msg: "Request Sent to Faculty!" });
-    } catch (err) { res.status(500).json({ success: false }); }
-});
-
-// NEW: Update Appointment Status & Send Confirmation Email
+// 📩 UPDATE STATUS & SEND EMAIL
 app.post("/update-status", async (req, res) => {
     const { teacherId, studentId, notificationId, newStatus } = req.body;
     try {
-        // 1. Update the notification status inside Teacher document
         await Teacher.updateOne(
             { _id: teacherId, "notifications.id": Number(notificationId) },
             { $set: { "notifications.$.status": newStatus } }
         );
 
-        // 2. Fetch student details to send email
         const student = await Student.findById(studentId);
         
         if (student && student.email) {
             const mailOptions = {
-                from: process.env.EMAIL_USER,
+                from: process.env.EMAIL_USER || "muskan7177.ca23@chitkara.edu.in",
                 to: student.email,
                 subject: `Faculty Connect: Appointment ${newStatus}`,
-                text: `Hello ${student.name},\n\nYour meeting request has been ${newStatus} by the faculty.\n\nPlease check your student dashboard for details.\n\nRegards,\nFaculty Connect Team`
+                text: `Hello ${student.name},\n\nYour meeting request has been ${newStatus} by the faculty.\n\nRegards,\nFaculty Connect Team`
             };
-            await transporter.sendMail(mailOptions);
-            res.json({ success: true, message: "Status updated and student notified via email!" });
+
+            transporter.sendMail(mailOptions, (err, info) => {
+                if (err) console.log("❌ Status Email Error:", err);
+                else console.log("✅ Status Email Sent:", info.response);
+            });
+
+            res.json({ success: true, message: "Status updated and student notified!" });
         } else {
-            res.json({ success: true, message: "Status updated locally (Email not found)." });
+            res.json({ success: true, message: "Updated locally (Student email not found)." });
         }
     } catch (err) {
         console.error("Status Update Error:", err);
         res.status(500).json({ success: false, msg: "Server Error" });
     }
-});
-
-app.post("/teacher/update-live-status", async (req, res) => {
-    try {
-        await Teacher.findByIdAndUpdate(req.body.teacherId, { status: req.body.status });
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ success: false }); }
 });
 
 // 📚 DATA FETCH ROUTES
@@ -188,6 +178,13 @@ app.get("/students", async (req, res) => {
 
 app.get("/teachers", async (req, res) => {
     try { res.json(await Teacher.find()); } catch(e) { res.json([]); }
+});
+
+app.post("/teacher/update-live-status", async (req, res) => {
+    try {
+        await Teacher.findByIdAndUpdate(req.body.teacherId, { status: req.body.status });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false }); }
 });
 
 app.post("/notes", async (req, res) => {
@@ -204,4 +201,6 @@ app.get("/notes", async (req, res) => {
 
 // 🚀 SERVER START
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+});
