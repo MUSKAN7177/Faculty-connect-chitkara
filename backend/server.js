@@ -10,21 +10,22 @@ app.use(express.json());
 
 // Verify connection configuration
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    // Direct IPv4 address for Gmail SMTP
+    host: '173.194.76.108', 
     port: 465,
     secure: true, 
     auth: {
         user: process.env.EMAIL_USER || "muskan7177.ca23@chitkara.edu.in",
         pass: process.env.EMAIL_PASS || "ntwnciimormgudgg" 
     },
-    connectionTimeout: 10000, 
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-    dnsTimeout: 10000,
-    debug: true, // Isse error details aur achi milengi
-    logger: true 
+    tls: {
+        // This ensures the certificate matches gmail.com even if we use the IP
+        servername: 'smtp.gmail.com',
+        rejectUnauthorized: false 
+    },
+    connectionTimeout: 20000, // 20 seconds
+    greetingTimeout: 20000
 });
-
 // Verify connection configuration
 transporter.verify(function (error, success) {
     if (error) {
