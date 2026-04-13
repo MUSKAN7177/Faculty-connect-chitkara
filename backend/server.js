@@ -25,6 +25,23 @@ const transporter = nodemailer.createTransport({
 });
 
 // Verify connection configuration
+const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, 
+    auth: {
+        user: process.env.EMAIL_USER || "muskan7177.ca23@chitkara.edu.in",
+        pass: process.env.EMAIL_PASS || "ntwnciimormgudgg" 
+    },
+    connectionTimeout: 10000, 
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+    dnsTimeout: 10000,
+    debug: true, // Isse error details aur achi milengi
+    logger: true 
+});
+
+// Verify connection configuration
 transporter.verify(function (error, success) {
     if (error) {
         console.log("❌ Nodemailer Verification Error:", error);
@@ -32,7 +49,6 @@ transporter.verify(function (error, success) {
         console.log("✅ Nodemailer is ready to send emails");
     }
 });
-
 app.get("/", (req, res) => res.send("Backend is Running Successfully!"));
 
 // 🔗 Database Connection
