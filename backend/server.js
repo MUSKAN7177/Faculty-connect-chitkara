@@ -8,22 +8,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 📧 Nodemailer Setup (Updated for better stability on Render)
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, 
-    auth: {
-        // Agar .env kaam nahi kar raha, toh yahan direct email/pass daal kar test karein
-        user: process.env.EMAIL_USER || "muskan7177.ca23@chitkara.edu.in",
-        pass: process.env.EMAIL_PASS || "ntwnciimormgudgg" 
-    },
-    tls: {
-        rejectUnauthorized: false // Isse connection errors kam hote hain
-    }
-});
-
 // Verify connection configuration
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
