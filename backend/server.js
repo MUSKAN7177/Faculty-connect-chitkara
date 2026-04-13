@@ -10,27 +10,29 @@ app.use(express.json());
 
 // 📧 Final Nodemailer Setup (Using Port 587 for Render Stability)
 const transporter = nodemailer.createTransport({
+    // Hum direct IPv4 host use karenge
     host: 'smtp.gmail.com',
     port: 587,
-    secure: false, // Port 587 ke liye hamesha false rakhein
+    secure: false, 
     auth: {
         user: process.env.EMAIL_USER || "muskan7177.ca23@chitkara.edu.in",
         pass: process.env.EMAIL_PASS || "ntwnciimormgudgg" 
     },
+    // YE HAI SABSE IMPORTANT SETTING: IPv4 Force karne ke liye
+    family: 4, 
     tls: {
-        rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
+        rejectUnauthorized: false
     },
-    connectionTimeout: 30000, // 30 seconds wait time
-    greetingTimeout: 30000
+    connectionTimeout: 40000, 
+    greetingTimeout: 40000
 });
 
-// Verify connection configuration
+// Verification check (Taki humein logs mein turant dikhe)
 transporter.verify(function (error, success) {
     if (error) {
-        console.log("❌ Nodemailer Verification Error:", error);
+        console.log("❌ Nodemailer FINAL Error:", error);
     } else {
-        console.log("✅ Nodemailer is ready to send emails");
+        console.log("✅ NODEMAILER IS READY!");
     }
 });
 
