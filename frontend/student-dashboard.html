@@ -3,9 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student ERP | Faculty Connect</title>
+    <title>Student Portal | Faculty Connect</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Custom UI Enhancements based on your feedback */
+        :root {
+            --chitkara-navy: #1a2a6c;
+            --chitkara-red: #d32f2f;
+            --gold-accent: #ffcc00;
+        }
+
+        .erp-sidebar {
+            background: linear-gradient(180deg, var(--chitkara-navy) 0%, #243b55 100%) !important;
+        }
+
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-left: 5px solid var(--gold-accent) !important;
+            color: #fff !important;
+        }
+
+        .smart-timeline {
+            margin-top: 20px;
+            border-left: 3px solid #eee;
+            padding-left: 20px;
+        }
+
+        .time-slot-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+        }
+
+        .live-border {
+            border: 2px solid var(--chitkara-red);
+            background: #fff9f9;
+        }
+
+        .pulse-icon {
+            background: var(--chitkara-red);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-size: 10px;
+            font-weight: bold;
+            animation: pulse-red 1.5s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
+        }
+
+        /* Profile ID Card Styling */
+        .id-card {
+            max-width: 350px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .id-header { background: var(--chitkara-navy); padding: 20px; }
+        .id-body { padding: 30px; position: relative; }
+        .avatar-circle {
+            width: 100px; height: 100px;
+            background: #eee; border-radius: 50%;
+            margin: -80px auto 15px; border: 5px solid white;
+            display: flex; align-items: center; justify-content: center; font-size: 40px;
+        }
+    </style>
 </head>
 <body class="erp-body">
 
@@ -23,7 +99,7 @@
                 <li onclick="showTab('timetable')" class="nav-item"><i class="fas fa-calendar-alt"></i> Time Table</li>
                 <li onclick="showTab('availability')" class="nav-item"><i class="fas fa-user-check"></i> Faculty Status</li>
                 <li onclick="showTab('gatepass')" class="nav-item"><i class="fas fa-door-open"></i> Gatepass</li>
-                <li onclick="showTab('medical')" class="nav-item"><i class="fas fa-notes-medical"></i> Medical Leave</li>
+                <li onclick="showTab('profile')" class="nav-item"><i class="fas fa-id-card"></i> My Profile</li>
                 <li onclick="logout()" class="nav-item logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</li>
             </ul>
         </nav>
@@ -32,7 +108,7 @@
             <header class="erp-header">
                 <h2 id="tabTitle">Academic Overview</h2>
                 <div class="header-right">
-                    <span id="currentDate"></span>
+                    <span id="currentDate" class="badge-date"></span>
                 </div>
             </header>
 
@@ -41,35 +117,35 @@
                     <div class="stat-card">
                         <p>Total Attendance</p>
                         <h3 id="myAttVal">0%</h3>
-                        <div class="progress-container"><div id="barVisual" class="progress-bar"></div></div>
+                        <div class="progress-container"><div id="barVisual" class="progress-bar" style="background: var(--chitkara-red);"></div></div>
                     </div>
                     <div class="stat-card">
                         <p>Academic Standing</p>
-                        <h3>Good</h3>
+                        <h3 style="color: green;">Active</h3>
                     </div>
                 </div>
                 <div class="marks-section card">
                     <h3>Internal Assessment Marks</h3>
                     <table class="erp-table">
                         <thead><tr><th>Component</th><th>Marks Obtained</th></tr></thead>
-                        <tbody>
-                            <tr><td>Sessional Test 1 (ST1)</td><td id="m-st1">0</td></tr>
-                            <tr><td>Sessional Test 2 (ST2)</td><td id="m-st2">0</td></tr>
-                            <tr><td>Assignments</td><td id="m-assignment">0</td></tr>
-                        </tbody>
+                        <tbody id="marksBody">
+                            </tbody>
                     </table>
                 </div>
             </div>
 
-            <div id="timetable" class="tab-content">
+            <div id="timetable" class="tab-content" style="display: none;">
                 <div class="card">
-                    <h3>Today's Schedule</h3>
-                    <div id="detailedTimetable" class="timeline-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Today's Schedule</h3>
+                        <span id="liveDay" style="color: var(--chitkara-red); font-weight: bold; border: 1px solid #ddd; padding: 5px 10px; border-radius: 5px;"></span>
+                    </div>
+                    <div id="detailedTimetable" class="smart-timeline">
                         </div>
                 </div>
             </div>
 
-            <div id="availability" class="tab-content">
+            <div id="availability" class="tab-content" style="display: none;">
                 <div class="card">
                     <h3>🔍 Branch Faculty Status</h3>
                     <div id="filteredTeacherList" class="faculty-grid">
@@ -77,45 +153,34 @@
                 </div>
             </div>
 
-            <div id="gatepass" class="tab-content">
+            <div id="profile" class="tab-content" style="display: none;">
+                <div id="profileIDCard">
+                    </div>
+            </div>
+
+            <div id="gatepass" class="tab-content" style="display: none;">
                 <div class="card form-card">
-                    <h3>Request Out-Station / Local Gatepass</h3>
+                    <h3>Request Gatepass</h3>
                     <form onsubmit="requestGatepass(event)">
-                        <div class="input-group">
-                            <label>Reason for Leave</label>
-                            <input type="text" id="gpReason" placeholder="e.g. Hospital / Personal Work" required>
-                        </div>
-                        <div class="input-group">
-                            <label>Out Time</label>
-                            <input type="time" id="gpTime" required>
-                        </div>
+                        <input type="text" id="gpReason" placeholder="Reason (e.g. Medical/Home)" required class="input-style">
+                        <input type="time" id="gpTime" required class="input-style">
                         <button type="submit" class="btn-submit">Generate Request</button>
                     </form>
                 </div>
             </div>
 
-            <div id="medical" class="tab-content">
-                <div class="card form-card">
-                    <h3>Submit Medical Certificate</h3>
-                    <form onsubmit="requestMedicalLeave(event)">
-                        <input type="text" id="illness" placeholder="Nature of Illness" required>
-                        <input type="number" id="duration" placeholder="Duration (Days)" required>
-                        <input type="text" id="docLink" placeholder="Medical Document Link (Drive/Cloud)" required>
-                        <button type="submit" class="btn-submit">Submit for Verification</button>
-                    </form>
-                </div>
-            </div>
         </main>
     </div>
 
     <script src="app.js"></script>
     <script>
-        // Tab Switching Logic
+        const user = JSON.parse(localStorage.getItem("user"));
+
         function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             
-            document.getElementById(tabId).classList.add('active');
+            document.getElementById(tabId).style.display = 'block';
             event.currentTarget.classList.add('active');
             
             const titles = {
@@ -123,28 +188,105 @@
                 'timetable': 'Daily Schedule',
                 'availability': 'Faculty Directory',
                 'gatepass': 'Gatepass Management',
-                'medical': 'Medical Leave'
+                'profile': 'Student ID Profile'
             };
             document.getElementById('tabTitle').innerText = titles[tabId];
 
+            if(tabId === 'timetable') loadAutoTimetable();
+            if(tabId === 'profile') loadProfileCard();
             if(tabId === 'availability') loadFilteredFaculty();
             if(tabId === 'academics') loadERPData();
         }
 
-        // Display User Details
         window.onload = () => {
-            const user = JSON.parse(localStorage.getItem("user"));
             if(!user) window.location.href="login.html";
             document.getElementById("userNameDisplay").innerText = user.name;
-            document.getElementById("userDeptDisplay").innerText = user.department;
+            document.getElementById("userDeptDisplay").innerText = user.department + " | Sem " + (user.semester || "6");
             document.getElementById("currentDate").innerText = new Date().toDateString();
             loadERPData();
         };
 
-        // Existing Load Functions (Connecting to App.js functions)
-        async function loadERPData() {
-            // ... (Aapki existing attendance logic yahan rahegi)
+        // --- NEW: Smart Timetable Logic ---
+        async function loadAutoTimetable() {
+            const container = document.getElementById("detailedTimetable");
+            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            const today = days[new Date().getDay()];
+            document.getElementById("liveDay").innerText = today;
+
+            try {
+                const res = await fetch(`${API_URL}/timetable?dept=${user.department}&sem=${user.semester}`);
+                const data = await res.json();
+                const todayClasses = data.filter(c => c.day === today);
+
+                if(todayClasses.length === 0) {
+                    container.innerHTML = "<p>No classes scheduled for today.</p>";
+                    return;
+                }
+
+                container.innerHTML = todayClasses.map(slot => {
+                    const now = new Date();
+                    const curTime = now.getHours() + ":" + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+                    const isLive = (curTime >= slot.startTime && curTime <= slot.endTime);
+                    
+                    return `
+                        <div class="time-slot-card ${isLive ? 'live-border' : ''}">
+                            <div style="min-width: 100px; font-weight: bold; color: var(--chitkara-navy);">
+                                ${slot.startTime} - ${slot.endTime}
+                            </div>
+                            <div style="flex-grow: 1;">
+                                <h4 style="margin:0;">${slot.subject}</h4>
+                                <small>Room: ${slot.room} | Faculty: ${slot.teacherName}</small>
+                            </div>
+                            ${isLive ? '<span class="pulse-icon">LIVE NOW</span>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch(e) { container.innerHTML = "Error loading timetable."; }
         }
+
+        // --- NEW: Professional ID Card ---
+        function loadProfileCard() {
+            document.getElementById("profileIDCard").innerHTML = `
+                <div class="id-card">
+                    <div class="id-header">
+                        <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" width="120">
+                    </div>
+                    <div class="id-body">
+                        <div class="avatar-circle"><i class="fas fa-user-graduate"></i></div>
+                        <h2 style="margin:0; color: var(--chitkara-navy);">${user.name}</h2>
+                        <p style="color: #666; margin-bottom: 20px;">${user.role.toUpperCase()}</p>
+                        <div style="text-align: left; background: #f9f9f9; padding: 15px; border-radius: 10px; font-size: 14px;">
+                            <p><strong>Roll No:</strong> ${user.rollNo || 'CU-2022-BCA'}</p>
+                            <p><strong>Department:</strong> ${user.department}</p>
+                            <p><strong>Semester:</strong> ${user.semester || '6'}</p>
+                            <p><strong>University:</strong> Chitkara University, Punjab</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadERPData() {
+            try {
+                const res = await fetch(`${API_URL}/students`);
+                const all = await res.json();
+                const me = all.find(s => s._id === user._id);
+                if(me) {
+                    document.getElementById("myAttVal").innerText = (me.attendance || 0) + "%";
+                    document.getElementById("barVisual").style.width = (me.attendance || 0) + "%";
+                    
+                    const m = me.marks || {};
+                    document.getElementById("marksBody").innerHTML = `
+                        <tr><td>Sessional Test 1 (ST1)</td><td>${m.st1 || 0}</td></tr>
+                        <tr><td>Sessional Test 2 (ST2)</td><td>${m.st2 || 0}</td></tr>
+                        <tr><td>Assignments</td><td>${m.assignment || 0}</td></tr>
+                        <tr style="font-weight:bold; background:#eee;"><td>Final Exam</td><td>${m.final || 'N/A'}</td></tr>
+                    `;
+                }
+            } catch(e) { console.log(e); }
+        }
+
+        function logout() { localStorage.clear(); window.location.href="role.html"; }
     </script>
 </body>
 </html>

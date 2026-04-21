@@ -3,9 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard | Faculty Connect</title>
+    <title>Faculty Portal | Faculty Connect</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --chitkara-navy: #1a2a6c;
+            --chitkara-red: #d32f2f;
+            --gold-accent: #ffcc00;
+        }
+
+        .erp-sidebar {
+            background: linear-gradient(180deg, var(--chitkara-navy) 0%, #243b55 100%) !important;
+        }
+
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-left: 5px solid var(--gold-accent) !important;
+            color: #fff !important;
+        }
+
+        .filter-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            border: 1px solid #eee;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-item label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+        }
+
+        .custom-select {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            outline: none;
+        }
+
+        .btn-save-record {
+            background: var(--chitkara-navy);
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-save-record:hover {
+            background: var(--chitkara-red);
+        }
+
+        /* Profile Card */
+        .id-card {
+            max-width: 350px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            overflow: hidden;
+        }
+        .id-header { background: var(--chitkara-navy); padding: 15px; }
+        .id-body { padding: 25px; }
+        .faculty-avatar {
+            width: 90px; height: 90px;
+            background: #f0f0f0; border-radius: 50%;
+            margin: -60px auto 10px; border: 4px solid white;
+            display: flex; align-items: center; justify-content: center; font-size: 35px;
+        }
+    </style>
 </head>
 <body class="erp-body">
 
@@ -20,10 +100,10 @@
             </div>
             <ul class="nav-menu">
                 <li onclick="showTab('attendance')" class="nav-item active"><i class="fas fa-users-cog"></i> Manage Records</li>
-                <li onclick="showTab('appointments')" class="nav-item"><i class="fas fa-envelope-open-text"></i> Appointments</li>
-                <li onclick="showTab('availability-status')" class="nav-item"><i class="fas fa-signal"></i> My Live Status</li>
-                <li onclick="showTab('material')" class="nav-item"><i class="fas fa-cloud-upload-alt"></i> Upload Center</li>
-                <li onclick="showTab('profile')" class="nav-item"><i class="fas fa-user-circle"></i> Profile</li>
+                <li onclick="showTab('appointments')" class="nav-item"><i class="fas fa-calendar-check"></i> Appointments</li>
+                <li onclick="showTab('availability-status')" class="nav-item"><i class="fas fa-signal"></i> My Status</li>
+                <li onclick="showTab('material')" class="nav-item"><i class="fas fa-cloud-upload"></i> Resources</li>
+                <li onclick="showTab('profile')" class="nav-item"><i class="fas fa-user-tie"></i> Profile</li>
                 <li onclick="logout()" class="nav-item logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</li>
             </ul>
         </nav>
@@ -32,22 +112,40 @@
             <header class="erp-header">
                 <h2 id="tabTitle">Update Student Records</h2>
                 <div class="header-right">
-                    <span class="badge-dept" id="topDeptBadge">BCA</span>
+                    <span class="badge-dept" id="topDeptBadge">...</span>
                 </div>
             </header>
 
             <div id="attendance" class="tab-content active">
-                <div class="card">
-                    <div class="marks-filter-header">
-                        <label><i class="fas fa-filter"></i> Select Assessment Type:</label>
-                        <select id="marksCategory" onchange="loadTeacherData()" class="custom-select">
-                            <option value="st1">Sessional Test 1 (ST1)</option>
-                            <option value="st2">Sessional Test 2 (ST2)</option>
-                            <option value="assignment">Assignment Marks</option>
-                            <option value="final">Final Exam Marks</option>
+                <div class="card filter-panel">
+                    <div class="filter-item">
+                        <label>Semester</label>
+                        <select id="semFilter" onchange="loadTeacherData()" class="custom-select">
+                            <option value="6">Semester 6</option>
+                            <option value="4">Semester 4</option>
+                            <option value="2">Semester 2</option>
                         </select>
                     </div>
+                    <div class="filter-item">
+                        <label>Section</label>
+                        <select id="secFilter" onchange="loadTeacherData()" class="custom-select">
+                            <option value="A">Section A</option>
+                            <option value="B">Section B</option>
+                            <option value="C">Section C</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>Assessment Type</label>
+                        <select id="marksCategory" onchange="loadTeacherData()" class="custom-select">
+                            <option value="st1">ST1 Marks</option>
+                            <option value="st2">ST2 Marks</option>
+                            <option value="assignment">Assignments</option>
+                            <option value="final">Final Exam</option>
+                        </select>
+                    </div>
+                </div>
 
+                <div class="card">
                     <div class="table-responsive">
                         <table class="erp-table">
                             <thead>
@@ -55,8 +153,8 @@
                                     <th>Student Name</th>
                                     <th>Roll No</th>
                                     <th>Attendance %</th>
-                                    <th id="marksLabel">ST1 Marks</th>
-                                    <th>Quick Actions</th>
+                                    <th id="marksLabel">Marks</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody id="studentBody">
@@ -66,66 +164,43 @@
                 </div>
             </div>
 
-            <div id="appointments" class="tab-content">
+            <div id="appointments" class="tab-content" style="display:none;">
                 <div class="card">
-                    <h3><i class="fas fa-calendar-check"></i> Pending Meeting Requests</h3>
+                    <h3><i class="fas fa-calendar-check"></i> Student Meeting Requests</h3>
                     <div id="requestList" class="request-grid">
-                        </div>
+                        <p style="padding:20px; color:#666;">Checking for new requests...</p>
+                    </div>
                 </div>
             </div>
 
-            <div id="availability-status" class="tab-content">
+            <div id="availability-status" class="tab-content" style="display:none;">
                 <div class="status-config-card card">
-                    <h3>Current Availability</h3>
+                    <h3>Set Your Live Visibility</h3>
                     <div class="status-switcher">
-                        <select id="statusSelect" onchange="updateLiveStatus()" class="status-dropdown">
+                        <select id="statusSelect" onchange="updateLiveStatus()" class="status-dropdown" style="padding:15px; width:100%; border-radius:10px; font-size:16px;">
                             <option value="Available">🟢 Available in Cabin</option>
                             <option value="Busy">🔴 Busy / In Class</option>
                             <option value="Away">🟡 Away from Desk</option>
+                            <option value="Meeting">🟠 In a Meeting</option>
                         </select>
                     </div>
                 </div>
-
-                <div class="card">
-                    <h3><i class="fas fa-clock"></i> Today's Class Analysis</h3>
-                    <div class="schedule-input-row">
-                        <input type="time" id="myStartTime">
-                        <input type="time" id="myEndTime">
-                        <button onclick="addSchedule()" class="btn-add-slot"><i class="fas fa-plus"></i> Add Slot</button>
-                    </div>
-                    <div id="scheduleList" class="chip-container"></div>
-                    <button onclick="saveTimetableToDB()" class="btn-save-all">Save Daily Schedule</button>
-                </div>
             </div>
 
-            <div id="material" class="tab-content">
-                <div class="card upload-card">
-                    <h3><i class="fas fa-share-alt"></i> Share Resources & Class Links</h3>
-                    <div class="input-group">
-                        <input type="text" id="subjectNote" placeholder="Subject Name (e.g. Java Programming)">
+            <div id="profile" class="tab-content" style="display:none;">
+                <div id="tProfileIDCard">
                     </div>
-                    <div class="input-group">
-                        <input type="text" id="noteLink" placeholder="Paste Drive Link or Room Number">
-                    </div>
-                    <div class="action-buttons">
-                        <button class="btn-share note" onclick="uploadMaterial('note')"><i class="fas fa-file-pdf"></i> Share Material</button>
-                        <button class="btn-share timetable" onclick="uploadMaterial('timetable')"><i class="fas fa-link"></i> Update Live Class</button>
-                    </div>
-                </div>
             </div>
-            
-            <div id="profile" class="tab-content">
-                </div>
 
         </main>
     </div>
 
     <script src="app.js"></script>
     <script>
-        // Existing Load Logic with UI Fixes
+        const user = JSON.parse(localStorage.getItem("user"));
+
         window.onload = () => {
-            const user = JSON.parse(localStorage.getItem("user"));
-            if(!user) window.location.href="login.html";
+            if(!user || user.role !== 'teacher') window.location.href="login.html";
             document.getElementById("tNameSidebar").innerText = user.name;
             document.getElementById("tDeptSidebar").innerText = user.department;
             document.getElementById("topDeptBadge").innerText = user.department;
@@ -133,11 +208,14 @@
         };
 
         function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
+            document.getElementById(tabId).style.display = 'block';
             event.currentTarget.classList.add('active');
-            
+
+            if(tabId === 'profile') loadTeacherProfile();
+            if(tabId === 'appointments') loadAppointments();
+
             const titles = {
                 'attendance': 'Update Student Records',
                 'appointments': 'Meeting Requests',
@@ -147,8 +225,68 @@
             };
             document.getElementById('tabTitle').innerText = titles[tabId];
         }
-        
-        // (Aapke baaki saare async functions yahan as it is rahenge)
+
+        async function loadTeacherData() {
+            const sem = document.getElementById("semFilter").value;
+            const sec = document.getElementById("secFilter").value;
+            const category = document.getElementById("marksCategory").value;
+            const tbody = document.getElementById("studentBody");
+
+            try {
+                const res = await fetch(`${API_URL}/students?dept=${user.department}`);
+                const allStudents = await res.json();
+                
+                // Filtering Logic
+                const filtered = allStudents.filter(s => s.semester == sem && s.section == sec);
+
+                if(filtered.length === 0) {
+                    tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>No students found for this Section.</td></tr>";
+                    return;
+                }
+
+                tbody.innerHTML = filtered.map(s => `
+                    <tr>
+                        <td><strong>${s.name}</strong></td>
+                        <td>${s.rollNo || 'N/A'}</td>
+                        <td><input type="number" id="att-${s._id}" value="${s.attendance || 0}" style="width:60px; padding:5px;"></td>
+                        <td><input type="number" id="marks-${s._id}" value="${s.marks?.[category] || 0}" style="width:60px; padding:5px;"></td>
+                        <td><button class="btn-save-record" onclick="saveData('${s._id}')">Update</button></td>
+                    </tr>
+                `).join('');
+            } catch(e) { console.log("Error loading students:", e); }
+        }
+
+        function loadTeacherProfile() {
+            document.getElementById("tProfileIDCard").innerHTML = `
+                <div class="id-card">
+                    <div class="id-header"><img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" width="100"></div>
+                    <div class="id-body">
+                        <div class="faculty-avatar"><i class="fas fa-user-tie"></i></div>
+                        <h2 style="margin:0;">Prof. ${user.name}</h2>
+                        <p style="color:var(--chitkara-red); font-weight:bold;">${user.department} Department</p>
+                        <div style="text-align:left; background:#f9f9f9; padding:15px; border-radius:10px; margin-top:15px; font-size:14px;">
+                            <p><strong>Designation:</strong> Assistant Professor</p>
+                            <p><strong>Email:</strong> ${user.email}</p>
+                            <p><strong>Expertise:</strong> Full Stack Development</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function updateLiveStatus() {
+            const newStatus = document.getElementById("statusSelect").value;
+            try {
+                await fetch(`${API_URL}/update-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ teacherId: user._id, status: newStatus })
+                });
+                alert("Status updated to: " + newStatus);
+            } catch(e) { alert("Status update failed."); }
+        }
+
+        function logout() { localStorage.clear(); window.location.href="role.html"; }
     </script>
 </body>
 </html>
