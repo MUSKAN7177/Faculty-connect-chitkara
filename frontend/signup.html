@@ -2,112 +2,94 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Faculty Connect - Register</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | Faculty Connect</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        /* Multi-select styling for better UX */
-        select[multiple] { height: 80px; }
-        .hint { font-size: 11px; color: #666; margin-bottom: 10px; display: none; }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body>
-    <div class="container">
-        <h2>Create Account</h2>
-        <form id="signupForm">
-            <input type="text" id="name" placeholder="Full Name" required>
-            
-            <div id="roleSpecificFields">
-                <input type="text" id="rollNo" placeholder="Roll Number (e.g. 211099...)">
-                <input type="text" id="idField" placeholder="University ID (for Teachers)" style="display:none;">
+<body class="auth-page">
+    <div class="signup-card animate-fade-in">
+        <div class="auth-header">
+            <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" alt="Chitkara Logo" class="auth-logo">
+            <h2>Create Account</h2>
+            <p id="signupRoleText">Registering as Student</p>
+        </div>
+
+        <form onsubmit="handleSignup(event)" class="auth-form">
+            <div class="input-grid">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="name" placeholder="Full Name" required>
+                </div>
+                
+                <div class="input-group">
+                    <i class="fas fa-id-card"></i>
+                    <input type="text" id="idField" placeholder="Roll No / University ID" required>
+                </div>
             </div>
 
-            <input type="email" id="email" placeholder="Email (e.g. name@chitkara.edu.in)" required>
-            
-            <div style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px;">
-                <select id="department" required>
-                    <option value="" disabled selected>Select Department</option>
-                    <option value="BCA">BCA</option>
-                    <option value="CSE">CSE</option>
-                    <option value="MCA">MCA</option>
-                </select>
-
-                <p id="semHint" class="hint">Hold Ctrl (or Cmd) to select multiple semesters</p>
-                <select id="semester" required>
-                    <option value="" disabled selected>Select Semester</option>
-                    <option value="1st">1st Sem</option>
-                    <option value="2nd">2nd Sem</option>
-                    <option value="3rd">3rd Sem</option>
-                    <option value="4th">4th Sem</option>
-                    <option value="5th">5th Sem</option>
-                    <option value="6th">6th Sem</option>
-                </select>
+            <div class="input-group">
+                <i class="fas fa-envelope"></i>
+                <input type="email" id="email" placeholder="Official Email Address" required>
             </div>
 
-            <input type="password" id="password" placeholder="Create Password" required>
-            <button type="submit" onclick="handleSignup(event)">Register Now</button>
+            <div class="input-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="password" placeholder="Create Password" required>
+            </div>
+
+            <div class="input-grid">
+                <div class="input-group">
+                    <i class="fas fa-building"></i>
+                    <select id="department" required>
+                        <option value="" disabled selected>Department</option>
+                        <option value="BCA">BCA</option>
+                        <option value="CSE">CSE</option>
+                        <option value="MCA">MCA</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <i class="fas fa-layer-group"></i>
+                    <select id="semester" required>
+                        <option value="" disabled selected>Semester</option>
+                        <option value="1">Sem 1</option>
+                        <option value="2">Sem 2</option>
+                        <option value="3">Sem 3</option>
+                        <option value="4">Sem 4</option>
+                        <option value="5">Sem 5</option>
+                        <option value="6">Sem 6</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-auth">REGISTER NOW <i class="fas fa-user-plus"></i></button>
         </form>
-        <p>Already have an account? <a href="login.html">Login here</a></p>
+
+        <div class="auth-footer">
+            <p>Already have an account? <a href="login.html">Login here</a></p>
+            <button onclick="location.href='role.html'" class="btn-text">
+                <i class="fas fa-chevron-left"></i> Back to Role Selection
+            </button>
+        </div>
     </div>
 
     <script>
-        const selectedRole = localStorage.getItem("selectedRole") || "student";
-        const semSelect = document.getElementById("semester");
-        const semHint = document.getElementById("semHint");
-        
-        // --- Teacher vs Student View Logic ---
-        if(selectedRole === "teacher") {
-            document.getElementById("rollNo").style.display = "none";
-            document.getElementById("idField").style.display = "block";
-            document.getElementById("idField").required = true;
-            
-            // Allow multiple selection for Teachers
-            semSelect.multiple = true;
-            semHint.style.display = "block";
-        } else {
-            document.getElementById("idField").style.display = "none";
-            document.getElementById("rollNo").required = true;
-        }
+        window.onload = function() {
+            const role = localStorage.getItem("userRole") || "student";
+            const text = document.getElementById("signupRoleText");
+            const idField = document.getElementById("idField");
 
-        async function handleSignup(e) {
-            e.preventDefault();
-            const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
-            
-            // Multi-select values ko array mein convert karna
-            const selectedSemesters = Array.from(semSelect.selectedOptions).map(option => option.value);
-
-            if(selectedSemesters.length === 0) {
-                return alert("Please select at least one semester!");
-            }
-
-            const data = {
-                name: document.getElementById("name").value,
-                email: document.getElementById("email").value,
-                password: document.getElementById("password").value,
-                department: document.getElementById("department").value,
-                // Teacher ke liye array, Student ke liye sirf pehli value
-                semester: selectedRole === "teacher" ? selectedSemesters : selectedSemesters[0],
-                role: selectedRole,
-                rollNo: document.getElementById("rollNo").value,
-                universityId: document.getElementById("idField").value
-            };
-
-            try {
-                const res = await fetch(`${API_URL}/signup`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data)
-                });
-                const result = await res.json();
-                if(result.success) {
-                    alert("Account Created! Please Login.");
-                    window.location.href = "login.html";
-                } else {
-                    alert("Error: " + result.msg);
-                }
-            } catch (err) {
-                alert("Server Error. Check your connection.");
+            if(role === 'teacher') {
+                text.innerText = "Registering as Faculty Member";
+                idField.placeholder = "University Teacher ID";
+                // Faculty ke liye semester hide ya modify kar sakte hain
+            } else {
+                text.innerText = "Registering as Student";
+                idField.placeholder = "University Roll Number";
             }
         }
     </script>
+    <script src="app.js"></script>
 </body>
 </html>

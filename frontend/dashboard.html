@@ -1,118 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Faculty Connect</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
-<body>
+<body class="dashboard-body">
 
-<div class="sidebar">
-  <h2>Dashboard</h2>
-  <button onclick="loadTeachers()">Teachers</button>
-  <button onclick="loadRequests()">Requests</button>
-</div>
+    <nav class="sidebar">
+        <div class="profile-section">
+            <img src="images/student-avatar.png" id="userImg" alt="Profile">
+            <h4 id="userName">User Name</h4>
+            <p id="userRole">Student</p>
+        </div>
+        
+        <div class="nav-links">
+            <button onclick="loadTeachers()" class="nav-btn active"><i class="fas fa-users"></i> Faculty Connect</button>
+            <button onclick="showSection('timetable')" class="nav-btn"><i class="fas fa-calendar-alt"></i> Timetable</button>
+            
+            <div id="studentMenu">
+                <button onclick="showSection('gatepass')" class="nav-btn"><i class="fas fa-door-open"></i> Gatepass</button>
+                <button onclick="showSection('medical')" class="nav-btn"><i class="fas fa-notes-medical"></i> Medical Leave</button>
+            </div>
 
-<div class="main">
-  <div id="data"></div>
-</div>
+            <button onclick="loadRequests()" class="nav-btn"><i class="fas fa-bell"></i> Notifications</button>
+            <button onclick="handleLogout()" class="nav-btn logout"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+    </nav>
 
-<script>
-const role = localStorage.getItem("role");
-const userId = localStorage.getItem("id");
+    <main class="main-content">
+        <header class="top-bar">
+            <h2 id="sectionTitle">Faculty Directory</h2>
+            <div class="search-box">
+                <input type="text" placeholder="Search Faculty..." id="searchBar">
+            </div>
+        </header>
 
-async function loadTeachers(){
-  const dept = localStorage.getItem("dept");
+        <div id="data" class="grid-container">
+            </div>
 
-const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/teachers/${dept}");
-  const teachers = await res.json();
+        <div id="formModal" class="modal">
+            </div>
+    </main>
 
-  let html = "";
+    <script src="app.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem("user"));
+        const role = localStorage.getItem("userRole");
 
-  teachers.forEach(t=>{
-    html += `
-    <div class="card">
-      <img src="${t.image}">
-      <h3>${t.name}</h3>
+        document.getElementById("userName").innerText = user.name;
+        document.getElementById("userRole").innerText = role.toUpperCase();
 
-      <span class="${t.timetable.length?'green':'red'}">
-        ${t.timetable.length?'Available':'Busy'}
-      </span><br>
+        if(role === "teacher") {
+            document.getElementById("studentMenu").style.display = "none";
+        }
 
-      ${role==="student" ? `<button onclick="sendReq('${t._id}')">Request</button>` : ""}
+        // 1. Load Teachers with Clean Grid Cards
+        async function loadTeachers() {
+            document.getElementById("sectionTitle").innerText = "Faculty Directory";
+            const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/teachers");
+            const teachers = await res.json();
 
-      ${role==="teacher" ? `<button onclick="addTT('${t._id}')">Add Timetable</button>` : ""}
+            let html = "";
+            teachers.forEach(t => {
+                const isAvailable = t.status === "Available";
+                html += `
+                <div class="faculty-card">
+                    <div class="card-header">
+                        <img src="images/teacher.jpg" alt="Teacher">
+                        <span class="status-badge ${isAvailable ? 'online' : 'offline'}">
+                            ${isAvailable ? 'Available' : 'Busy'}
+                        </span>
+                    </div>
+                    <h3>${t.name}</h3>
+                    <p>${t.department}</p>
+                    
+                    <div class="card-actions">
+                        <button onclick="viewTT('${t._id}')" class="btn-outline">View Timetable</button>
+                        ${role === "student" ? `<button onclick="sendReq('${t._id}', '${t.name}')" class="btn-primary">Book Meeting</button>` : ""}
+                    </div>
+                </div>
+                `;
+            });
+            document.getElementById("data").innerHTML = html;
+        }
 
-      <button onclick="viewTT('${t._id}')">View</button>
-    </div>
-    `;
-  });
+        // 2. Show Forms for Gatepass/Medical (Chalkpad Style)
+        function showSection(type) {
+            const container = document.getElementById("data");
+            if(type === 'gatepass') {
+                container.innerHTML = `
+                    <div class="form-card card">
+                        <h3>Request Gatepass</h3>
+                        <form onsubmit="requestGatepass(event)">
+                            <label>Reason for Leave</label>
+                            <input type="text" id="gpReason" placeholder="Personal / Hospital" required>
+                            <label>Out Time</label>
+                            <input type="time" id="gpTime" required>
+                            <button type="submit" class="btn-primary">Apply for Gatepass</button>
+                        </form>
+                    </div>
+                `;
+            } else if(type === 'medical') {
+                container.innerHTML = `
+                    <div class="form-card card">
+                        <h3>Apply for Medical Leave</h3>
+                        <form onsubmit="requestMedicalLeave(event)">
+                            <label>Nature of Illness</label>
+                            <input type="text" id="illness" placeholder="Fever / Injury" required>
+                            <label>Duration (Days)</label>
+                            <input type="number" id="duration" required>
+                            <label>Medical Certificate Link (Drive)</label>
+                            <input type="text" id="docLink" placeholder="Paste link here" required>
+                            <button type="submit" class="btn-primary">Submit Leave</button>
+                        </form>
+                    </div>
+                `;
+            }
+        }
 
-  document.getElementById("data").innerHTML = html;
-}
-
-async function sendReq(tid){
-  await fetch("https://chitkara-faculty-app-2026.onrender.com/request",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      student:userId,
-      teacherId:tid,
-      status:"pending"
-    })
-  });
-  alert("Request Sent");
-}
-
-async function addTT(tid){
-  const day = prompt("Day");
-  const start = prompt("Start Time");
-  const end = prompt("End Time");
-
-  await fetch("https://chitkara-faculty-app-2026.onrender.com/timetable/"+tid,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify([{day,start,end}])
-  });
-
-  alert("Timetable Saved");
-}
-
-async function viewTT(tid){
-  const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/timetable/"+tid);
-  const data = await res.json();
-
-  alert(data.map(t=>t.day+" "+t.start+"-"+t.end).join("\n"));
-}
-
-async function loadRequests(){
-  const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/request/"+userId);
-  const reqs = await res.json();
-
-  let html = "";
-
-  reqs.forEach(r=>{
-    html += `
-    <div class="card">
-      ${r.student} - ${r.status}
-      <button onclick="updateReq('${r._id}','accepted')">✔</button>
-      <button onclick="updateReq('${r._id}','rejected')">❌</button>
-    </div>
-    `;
-  });
-
-  document.getElementById("data").innerHTML = html;
-}
-
-async function updateReq(id,status){
-  await fetch("https://chitkara-faculty-app-2026.onrender.com/request/"+id,{
-    method:"PUT",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({status})
-  });
-}
-
-loadTeachers();
-</script>
-
+        // Initialize
+        loadTeachers();
+    </script>
 </body>
-</html>cd
+</html>

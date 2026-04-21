@@ -1,15 +1,36 @@
 {
-  "name": "Faculty Connect Chitkara",
+  "name": "Faculty Connect | Chitkara University",
   "short_name": "FacultyConnect",
-  "start_url": "index.html",
+  "description": "Real-time bridge between Chitkara Faculty and Students.",
+  "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#8b0000",
-  "theme_color": "#8b0000",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#d32f2f",
   "icons": [
     {
       "src": "https://www.chitkara.edu.in/wp-content/themes/chitkara/images/favicon.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://www.chitkara.edu.in/wp-content/themes/chitkara/images/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "View Timetable",
+      "url": "/student-dashboard.html",
+      "icons": [{ "src": "https://www.chitkara.edu.in/wp-content/themes/chitkara/images/favicon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Faculty Status",
+      "url": "/student-dashboard.html",
+      "icons": [{ "src": "https://www.chitkara.edu.in/wp-content/themes/chitkara/images/favicon.png", "sizes": "192x192" }]
     }
   ]
 }

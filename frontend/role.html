@@ -2,28 +2,45 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Select Role | Faculty Connect</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body>
-    <div class="container">
-        <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" style="width: 220px; margin-bottom: 20px;">
-        <h2>Welcome to Portal</h2>
-        <p>Please select your identity to continue</p>
-        <div class="role-box">
-            <button onclick="selectRole('teacher')">Faculty / Teacher</button>
-<button onclick="selectRole('student')">Student</button>
+<body class="auth-page">
+    <div class="role-container animate-fade-in">
+        <div class="auth-header">
+            <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" alt="Chitkara Logo" class="auth-logo">
+            <h2>Select Identity</h2>
+            <p>Choose your role to access the portal</p>
+        </div>
 
-<script>
-function selectRole(role) {
-    localStorage.setItem("selectedRole", role); // Yahan value save ho rahi hai
-    window.location.href = "login.html";
-}
-</script>
+        <div class="role-grid">
+            <div class="role-card" onclick="selectRole('teacher')">
+                <div class="role-icon teacher-bg">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
+                <h3>Faculty</h3>
+                <p>Login to manage status & requests</p>
+            </div>
+
+            <div class="role-card" onclick="selectRole('student')">
+                <div class="role-icon student-bg">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <h3>Student</h3>
+                <p>Login to check faculty & timetable</p>
+            </div>
+        </div>
+
+        <div class="auth-footer">
+            <p>© 2026 Chitkara University | Faculty Connect</p>
         </div>
     </div>
+
     <script>
-        function setRole(role) {
+        function selectRole(role) {
+            // Consistency ke liye 'userRole' key use kar rahe hain
             localStorage.setItem("userRole", role); 
             window.location.href = "login.html";
         }

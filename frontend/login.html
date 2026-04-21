@@ -2,74 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | Faculty Connect</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body>
-    <div class="container">
-        <h2 id="loginTitle">Login</h2>
-        <p id="roleText" style="font-weight: bold; color: #8b0000;"></p>
+<body class="auth-page">
+    <div class="login-card animate-fade-in">
+        <div class="auth-header">
+            <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" alt="Chitkara Logo" class="auth-logo">
+            <h2 id="loginTitle">Student Login</h2>
+            <p id="roleBadge" class="badge-role">STUDENT</p>
+        </div>
 
-        <form onsubmit="handleLogin(event)">
-            <input type="email" id="loginEmail" placeholder="Official Email" required>
-            <input type="password" id="loginPassword" placeholder="Password" required>
-            <button type="submit">Sign In</button>
+        <form onsubmit="handleLogin(event)" class="auth-form">
+            <div class="input-group">
+                <i class="fas fa-envelope"></i>
+                <input type="email" id="loginEmail" placeholder="Official Email (name@chitkara.edu.in)" required>
+            </div>
+            
+            <div class="input-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="loginPassword" placeholder="Password" required>
+            </div>
+
+            <button type="submit" class="btn-auth">SIGN IN <i class="fas fa-arrow-right"></i></button>
         </form>
 
-        <p style="margin-top: 20px;">
-            New user? <a href="signup.html" style="color: #8b0000; font-weight: bold; text-decoration: none;">Register here</a>
-        </p>
-        <button onclick="location.href='role.html'" style="background: transparent; border:none; color: #666; cursor:pointer;">← Change Role</button>
+        <div class="auth-footer">
+            <p>New user? <a href="signup.html">Register here</a></p>
+            <button onclick="location.href='role.html'" class="btn-text">
+                <i class="fas fa-chevron-left"></i> Change Role
+            </button>
+        </div>
     </div>
 
     <script>
-    // Page load hote hi check karo ki role kya select kiya tha
-    window.onload = function() {
-        const role = localStorage.getItem("selectedRole") || "student";
-        document.getElementById("roleText").innerText = `Logging in as ${role.toUpperCase()}`;
-        
-        // Agar teacher hai toh title change kar do
-        if(role === 'teacher') {
-            document.getElementById("loginTitle").innerText = "Faculty Login";
-        } else {
-            document.getElementById("loginTitle").innerText = "Student Login";
-        }
-    }
+        window.onload = function() {
+            // Hum 'userRole' use kar rahe hain jo role.html se set hota hai
+            const role = localStorage.getItem("userRole") || "student";
+            const badge = document.getElementById("roleBadge");
+            const title = document.getElementById("loginTitle");
 
-    async function handleLogin(e) {
-        e.preventDefault();
-        const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
-        
-        // LocalStorage se fresh role uthao
-        const role = localStorage.getItem("selectedRole") || "student";
-        const email = document.getElementById("loginEmail").value;
-        const password = document.getElementById("loginPassword").value;
-
-        try {
-            const res = await fetch(`${API_URL}/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password, role }) // Role backend ko ja raha hai
-            });
-
-            const result = await res.json();
-            if (result.success) {
-                localStorage.setItem("user", JSON.stringify(result.user));
-                
-                // Redirect logic based on role
-                if (role === "student") {
-                    window.location.href = "student-dashboard.html";
-                } else {
-                    window.location.href = "teacher-dashboard.html";
-                }
+            badge.innerText = role.toUpperCase();
+            
+            if(role === 'teacher') {
+                title.innerText = "Faculty Login";
+                badge.style.backgroundColor = "#2c3e50"; // Faculty ke liye dark blue/grey
             } else {
-                alert("Login Failed: " + result.msg);
+                title.innerText = "Student Login";
+                badge.style.backgroundColor = "#d32f2f"; // Student ke liye Chitkara Red
             }
-        } catch (err) {
-            console.error(err);
-            alert("Server error, please try again.");
         }
-    }
-</script>
+    </script>
+    <script src="app.js"></script>
 </body>
 </html>

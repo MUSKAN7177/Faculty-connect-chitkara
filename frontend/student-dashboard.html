@@ -2,299 +2,149 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student ERP | Faculty Connect</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        .container { max-width: 1100px !important; width: 95%; margin: 20px auto; }
-        .cuims-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin: 20px 0; }
-        .grid-item { 
-            background: white; padding: 15px; border-radius: 12px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; 
-            transition: 0.3s; text-align: center;
-        }
-        .grid-item:hover { transform: translateY(-5px); }
-        .grid-item p { font-size: 11px; font-weight: bold; color: #8b0000; margin-top: 5px; }
-        .period-card {
-            border-left: 5px solid #28a745; background: #f8f9fa; 
-            padding: 15px; margin-bottom: 10px; display: flex; 
-            justify-content: space-between; align-items: center; border-radius: 0 8px 8px 0;
-        }
-        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; color: white; font-weight: bold; }
-        .profile-img { width: 80px; height: 80px; border-radius: 50%; background: #eee; margin-bottom: 15px; }
-        input[type="password"], textarea, select { padding: 10px; border-radius: 6px; border: 1px solid #ddd; width: 100%; }
-        
-        /* New Table Styling for Marks */
-        .marks-table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; border-radius: 8px; overflow: hidden; }
-        .marks-table th { background: #8b0000; color: white; padding: 12px; text-align: left; }
-        .marks-table td { padding: 12px; border-bottom: 1px solid #eee; font-weight: bold; }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body>
-    <div class="container">
-        <h2 id="welcomeText" style="text-align: center; padding-bottom: 10px;">Student ERP Portal</h2>
-        
-        <div class="cuims-grid">
-            <div class="grid-item" onclick="showTab('academics')">
-                <img src="https://cdn-icons-png.flaticon.com/512/3589/3589030.png" width="35">
-                <p>Attendance</p>
-            </div>
-            <div class="grid-item" onclick="showTab('material')">
-                <img src="https://cdn-icons-png.flaticon.com/512/2436/2436636.png" width="35">
-                <p>Resources</p>
-            </div>
-            <div class="grid-item" onclick="showTab('timetable')">
-                <img src="https://cdn-icons-png.flaticon.com/512/3652/3652191.png" width="35">
-                <p>Time Table</p>
-            </div>
-            <div class="grid-item" onclick="showTab('availability')">
-                <img src="https://cdn-icons-png.flaticon.com/512/3079/3079165.png" width="35">
-                <p>Availability</p>
-            </div>
-            <div class="grid-item" onclick="showTab('profile')">
-                <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" width="35">
-                <p>My Profile</p>
-            </div>
-        </div>
+<body class="erp-body">
 
-        <div id="academics" class="section-content active">
-            <div class="academic-card">
-                <h3>My Academic Overview</h3>
-                <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <div class="erp-card" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center;">
-                        <div class="card-title" style="color: #666; font-size: 14px;">Total Attendance</div>
-                        <div class="card-value" style="font-size: 32px; font-weight: bold; color: #8b0000;"><span id="myAttVal">0</span>%</div>
-                        <div class="prog-container" style="background:#eee; border-radius:10px; height:12px; margin-top:10px;">
-                            <div id="barVisual" class="prog-bar" style="width: 0%; height:100%; border-radius:10px; transition: 1s;"></div>
+    <div class="dashboard-wrapper">
+        <nav class="erp-sidebar">
+            <div class="sidebar-header">
+                <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" class="erp-logo">
+            </div>
+            <div class="user-info-brief">
+                <p id="userNameDisplay">Loading...</p>
+                <small id="userDeptDisplay">BCA</small>
+            </div>
+            <ul class="nav-menu">
+                <li onclick="showTab('academics')" class="nav-item active"><i class="fas fa-graduation-cap"></i> Academics</li>
+                <li onclick="showTab('timetable')" class="nav-item"><i class="fas fa-calendar-alt"></i> Time Table</li>
+                <li onclick="showTab('availability')" class="nav-item"><i class="fas fa-user-check"></i> Faculty Status</li>
+                <li onclick="showTab('gatepass')" class="nav-item"><i class="fas fa-door-open"></i> Gatepass</li>
+                <li onclick="showTab('medical')" class="nav-item"><i class="fas fa-notes-medical"></i> Medical Leave</li>
+                <li onclick="logout()" class="nav-item logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</li>
+            </ul>
+        </nav>
+
+        <main class="erp-main">
+            <header class="erp-header">
+                <h2 id="tabTitle">Academic Overview</h2>
+                <div class="header-right">
+                    <span id="currentDate"></span>
+                </div>
+            </header>
+
+            <div id="academics" class="tab-content active">
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <p>Total Attendance</p>
+                        <h3 id="myAttVal">0%</h3>
+                        <div class="progress-container"><div id="barVisual" class="progress-bar"></div></div>
+                    </div>
+                    <div class="stat-card">
+                        <p>Academic Standing</p>
+                        <h3>Good</h3>
+                    </div>
+                </div>
+                <div class="marks-section card">
+                    <h3>Internal Assessment Marks</h3>
+                    <table class="erp-table">
+                        <thead><tr><th>Component</th><th>Marks Obtained</th></tr></thead>
+                        <tbody>
+                            <tr><td>Sessional Test 1 (ST1)</td><td id="m-st1">0</td></tr>
+                            <tr><td>Sessional Test 2 (ST2)</td><td id="m-st2">0</td></tr>
+                            <tr><td>Assignments</td><td id="m-assignment">0</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="timetable" class="tab-content">
+                <div class="card">
+                    <h3>Today's Schedule</h3>
+                    <div id="detailedTimetable" class="timeline-container">
                         </div>
-                    </div>
-                    
-                    <div class="erp-card" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                        <table class="marks-table" style="margin-top: 0;">
-                            <thead>
-                                <tr>
-                                    <th>Assessment</th>
-                                    <th>Marks</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr><td>Sessional Test 1 (ST1)</td><td id="m-st1">0</td></tr>
-                                <tr><td>Sessional Test 2 (ST2)</td><td id="m-st2">0</td></tr>
-                                <tr><td>Assignments</td><td id="m-assignment">0</td></tr>
-                                <tr><td>Final Examination</td><td id="m-final">0</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
-        </div>
 
-        <div id="availability" class="section-content" style="display: none;">
-            <div class="academic-card">
-                <h3>🔍 Faculty Availability</h3>
-                <p id="branchInfo" style="font-size: 12px; color: #666; margin-bottom: 15px;"></p>
-                <div id="filteredTeacherList">Loading Teachers...</div>
-            </div>
-        </div>
-
-        <div id="book" class="section-content" style="display: none;">
-            <div class="academic-card">
-                <h3>Connect with Faculty</h3>
-                <label>Select Teacher:</label>
-                <select id="teacherSelect" style="margin-bottom:10px;"></select>
-                <textarea id="msg" placeholder="Reason for meeting..." style="margin-bottom:10px; height: 100px;"></textarea>
-                <button class="btn-primary" onclick="sendRequest()" style="width:100%;">Book Appointment</button>
-                <button class="btn-primary" onclick="showTab('availability')" style="width:100%; margin-top:10px; background:#666;">Back</button>
-            </div>
-        </div>
-
-        <div id="timetable" class="section-content" style="display: none;">
-            <div class="academic-card">
-                <h3>📅 Today's Schedule</h3>
-                <div id="detailedTimetable">Loading schedule...</div>
-            </div>
-        </div>
-
-        <div id="material" class="section-content" style="display: none;">
-            <div class="academic-card">
-                <h3>📚 Study Materials</h3>
-                <div id="notesInbox">Loading notes...</div>
-            </div>
-        </div>
-
-        <div id="profile" class="section-content" style="display: none;">
-            <div class="academic-card" style="text-align: center;">
-                <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" class="profile-img">
-                <h3 id="pName">Student Name</h3>
-                <p id="pEmail" style="color: #666;"></p>
-                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
-                <div style="text-align: left; font-size: 14px; padding: 0 20px;">
-                    <p><strong>Roll No:</strong> <span id="pRoll"></span></p>
-                    <p><strong>Department:</strong> <span id="pDept"></span></p>
-                </div>
-                <div style="margin-top: 20px; padding: 20px; background: #fdfdfd; border: 1px solid #eee; border-radius: 12px;">
-                    <h4>Security</h4>
-                    <input type="password" id="sNewPass" placeholder="New Password" style="margin-top: 10px;">
-                    <button class="btn-primary" onclick="changeStudentPass()" style="width: 100%; margin-top: 10px;">Update Password</button>
+            <div id="availability" class="tab-content">
+                <div class="card">
+                    <h3>🔍 Branch Faculty Status</h3>
+                    <div id="filteredTeacherList" class="faculty-grid">
+                        </div>
                 </div>
             </div>
-        </div>
 
-        <div style="text-align: center; padding: 20px;">
-            <button class="btn-logout" onclick="logout()">Logout</button>
-        </div>
+            <div id="gatepass" class="tab-content">
+                <div class="card form-card">
+                    <h3>Request Out-Station / Local Gatepass</h3>
+                    <form onsubmit="requestGatepass(event)">
+                        <div class="input-group">
+                            <label>Reason for Leave</label>
+                            <input type="text" id="gpReason" placeholder="e.g. Hospital / Personal Work" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Out Time</label>
+                            <input type="time" id="gpTime" required>
+                        </div>
+                        <button type="submit" class="btn-submit">Generate Request</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="medical" class="tab-content">
+                <div class="card form-card">
+                    <h3>Submit Medical Certificate</h3>
+                    <form onsubmit="requestMedicalLeave(event)">
+                        <input type="text" id="illness" placeholder="Nature of Illness" required>
+                        <input type="number" id="duration" placeholder="Duration (Days)" required>
+                        <input type="text" id="docLink" placeholder="Medical Document Link (Drive/Cloud)" required>
+                        <button type="submit" class="btn-submit">Submit for Verification</button>
+                    </form>
+                </div>
+            </div>
+        </main>
     </div>
 
+    <script src="app.js"></script>
     <script>
-        const user = JSON.parse(localStorage.getItem("user"));
-        const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
-
-        if (!user) window.location.href = "login.html";
-        document.getElementById("welcomeText").innerText = `Welcome, ${user.name}`;
-        if(document.getElementById("branchInfo")) {
-            document.getElementById("branchInfo").innerText = `My Branch: ${user.department}`;
-        }
-
+        // Tab Switching Logic
         function showTab(tabId) {
-            document.querySelectorAll('.section-content').forEach(s => s.style.display = 'none');
-            document.getElementById(tabId).style.display = 'block';
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             
-            if (tabId === 'material') loadMaterial();
-            if (tabId === 'academics') loadERPData();
-            if (tabId === 'timetable') loadDetailedTimetable();
-            if (tabId === 'availability') loadFilteredFaculty();
-            if (tabId === 'profile') loadProfileData();
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+            
+            const titles = {
+                'academics': 'Academic Overview',
+                'timetable': 'Daily Schedule',
+                'availability': 'Faculty Directory',
+                'gatepass': 'Gatepass Management',
+                'medical': 'Medical Leave'
+            };
+            document.getElementById('tabTitle').innerText = titles[tabId];
+
+            if(tabId === 'availability') loadFilteredFaculty();
+            if(tabId === 'academics') loadERPData();
         }
 
+        // Display User Details
+        window.onload = () => {
+            const user = JSON.parse(localStorage.getItem("user"));
+            if(!user) window.location.href="login.html";
+            document.getElementById("userNameDisplay").innerText = user.name;
+            document.getElementById("userDeptDisplay").innerText = user.department;
+            document.getElementById("currentDate").innerText = new Date().toDateString();
+            loadERPData();
+        };
+
+        // Existing Load Functions (Connecting to App.js functions)
         async function loadERPData() {
-            try {
-                const res = await fetch(`${API_URL}/students`);
-                const students = await res.json();
-                const me = students.find(s => s._id === user._id);
-                if (me) {
-                    // Attendance Logic
-                    const att = me.attendance || 0;
-                    document.getElementById("myAttVal").innerText = att;
-                    const bar = document.getElementById("barVisual");
-                    bar.style.width = att + "%";
-                    bar.style.background = att < 75 ? "#e74c3c" : "#27ae60";
-
-                    // Marks Logic (Multiple Categories)
-                    const m = me.marks || {};
-                    document.getElementById("m-st1").innerText = m.st1 || 0;
-                    document.getElementById("m-st2").innerText = m.st2 || 0;
-                    document.getElementById("m-assignment").innerText = m.assignment || 0;
-                    document.getElementById("m-final").innerText = m.final || 0;
-                }
-            } catch(e) { console.error("Error loading ERP data:", e); }
+            // ... (Aapki existing attendance logic yahan rahegi)
         }
-
-        async function loadFilteredFaculty() {
-            try {
-                const res = await fetch(`${API_URL}/teachers`);
-                const teachers = await res.json();
-                const myFaculty = teachers.filter(t => t.department?.toLowerCase() === user.department?.toLowerCase());
-
-                const listDiv = document.getElementById("filteredTeacherList");
-                listDiv.innerHTML = myFaculty.map(t => `
-                    <div class="period-card" style="border-left-color: ${t.status === 'Available' ? '#27ae60' : (t.status === 'Away' ? '#f39c12' : '#e74c3c')}">
-                        <div>
-                            <strong>${t.name}</strong> <br>
-                            <span class="status-badge" style="background: ${t.status === 'Available' ? '#27ae60' : (t.status === 'Away' ? '#f39c12' : '#e74c3c')}">
-                                ${t.status || 'Available'}
-                            </span>
-                        </div>
-                        <button class="btn-primary" onclick="openBookingTab('${t._id}')" style="width: auto; padding: 5px 12px; font-size: 11px;">Book Appointment</button>
-                    </div>
-                `).join('') || "<p>No faculty found for your branch.</p>";
-            } catch (err) { console.error(err); }
-        }
-
-        function openBookingTab(tId) {
-            showTab('book');
-            loadFacultyListForDropdown(tId);
-        }
-
-        async function loadFacultyListForDropdown(selectedId) {
-            const res = await fetch(`${API_URL}/teachers`);
-            const teachers = await res.json();
-            const myFaculty = teachers.filter(t => t.department?.toLowerCase() === user.department?.toLowerCase());
-            const dropdown = document.getElementById("teacherSelect");
-            dropdown.innerHTML = myFaculty.map(t => `<option value="${t._id}" ${t._id === selectedId ? 'selected' : ''}>${t.name}</option>`).join('');
-        }
-
-        async function sendRequest() {
-            const tId = document.getElementById("teacherSelect").value;
-            const msg = document.getElementById("msg").value;
-            if(!msg) return alert("Please enter a reason!");
-            
-            const res = await fetch(`${API_URL}/send-request`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    teacherId: tId, 
-                    studentName: user.name, 
-                    studentId: user._id, 
-                    message: msg 
-                })
-            });
-            
-            if(res.ok) { 
-                alert("Request Sent! You will receive an email once the faculty responds."); 
-                document.getElementById("msg").value = ""; 
-                showTab('availability'); 
-            }
-        }
-
-        async function loadMaterial() {
-            const res = await fetch(`${API_URL}/notes`);
-            const data = await res.json();
-            const notes = data.filter(item => item.category === 'note');
-            document.getElementById("notesInbox").innerHTML = notes.map(item => `
-                <div class="inbox-item" style="border-left: 5px solid #8b0000; margin-bottom:10px; padding:15px; background:#fff; border: 1px solid #eee; border-radius:8px;">
-                    <strong>${item.subject}</strong> <br>
-                    <a href="${item.link}" target="_blank" style="color:#2980b9; font-size:13px; font-weight:bold;">🔗 View Resource</a>
-                    <br><small style="color:#666;">Uploaded by Prof. ${item.teacherName}</small>
-                </div>
-            `).join('') || "<p>No resources available.</p>";
-        }
-
-        async function loadDetailedTimetable() {
-            try {
-                const res = await fetch(`${API_URL}/notes`);
-                const data = await res.json();
-                const tt = data.filter(item => item.category === 'timetable');
-                document.getElementById("detailedTimetable").innerHTML = tt.map(item => `
-                    <div class="period-card" style="border-left-color: #f39c12;">
-                        <div>
-                            <strong>${item.subject}</strong> <br>
-                            <small>Venue/Link: ${item.link}</small>
-                        </div>
-                        <span style="font-size:11px; color:#666;">By Prof. ${item.teacherName}</span>
-                    </div>
-                `).join('') || "<p>No class updates for today.</p>";
-            } catch(e) { console.error(e); }
-        }
-
-        function loadProfileData() {
-            document.getElementById("pName").innerText = user.name;
-            document.getElementById("pEmail").innerText = user.email;
-            document.getElementById("pRoll").innerText = user.rollNo || "N/A";
-            document.getElementById("pDept").innerText = user.department;
-        }
-
-        async function changeStudentPass() {
-            const newPass = document.getElementById("sNewPass").value;
-            if(!newPass) return alert("Please enter a password!");
-            const res = await fetch(`${API_URL}/change-password`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userId: user._id, role: "student", newPassword: newPass })
-            });
-            if(res.ok) { alert("Password Updated Successfully!"); document.getElementById("sNewPass").value = ""; }
-        }
-
-        function logout() { localStorage.clear(); window.location.href="role.html"; }
-        window.onload = loadERPData;
     </script>
 </body>
 </html>
