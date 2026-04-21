@@ -21,38 +21,25 @@
             color: #fff !important;
         }
 
-        /* Appointment Cards */
+        /* Appointment & Status Cards */
         .apt-card {
-            background: #fff;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid #eee;
+            background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee;
         }
-        .status-pill { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .status-pill { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: capitalize; }
         .status-pending { background: #fff3cd; color: #856404; }
         .status-approved { background: #d4edda; color: #155724; }
         .status-declined { background: #f8d7da; color: #721c24; }
 
         /* Faculty Status Grid */
         .faculty-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-        .fac-card { background: #fff; padding: 20px; border-radius: 15px; text-align: center; border-top: 5px solid var(--chitkara-navy); }
+        .fac-card { background: #fff; padding: 20px; border-radius: 15px; text-align: center; border-top: 5px solid var(--chitkara-navy); transition: 0.3s; }
+        .fac-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .status-indicator { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; }
 
-        /* Timetable Pulse */
-        .live-border { border: 2px solid var(--chitkara-red); background: #fff9f9; }
-        .pulse-icon {
-            background: var(--chitkara-red); color: white; padding: 4px 10px; border-radius: 50px;
-            font-size: 10px; animation: pulse-red 1.5s infinite;
-        }
-        @keyframes pulse-red {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
-        }
+        /* General UI */
+        .input-style { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; }
+        .btn-submit { background: var(--chitkara-red); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; }
     </style>
 </head>
 <body class="erp-body">
@@ -72,6 +59,7 @@
                 <li onclick="showTab('availability')" class="nav-item"><i class="fas fa-user-check"></i> Faculty Status</li>
                 <li onclick="showTab('appointments')" class="nav-item"><i class="fas fa-handshake"></i> Appointments</li>
                 <li onclick="showTab('gatepass')" class="nav-item"><i class="fas fa-door-open"></i> Gatepass</li>
+                <li onclick="showTab('medical')" class="nav-item"><i class="fas fa-briefcase-medical"></i> Medical Leave</li>
                 <li onclick="showTab('profile')" class="nav-item"><i class="fas fa-id-card"></i> My Profile</li>
                 <li onclick="logout()" class="nav-item logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</li>
             </ul>
@@ -93,7 +81,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="marks-section card">
+                <div class="marks-section card" style="margin-top:20px;">
                     <h3>Internal Assessment Marks</h3>
                     <table class="erp-table" width="100%">
                         <thead><tr><th>Component</th><th>Marks</th></tr></thead>
@@ -105,10 +93,8 @@
             <div id="appointments" class="tab-content" style="display: none;">
                 <div class="card">
                     <h3>Book Appointment</h3>
-                    <form onsubmit="handleAptRequest(event)" class="form-grid">
-                        <select id="facSelect" class="input-style" required>
-                            <option value="">Select Faculty</option>
-                        </select>
+                    <form onsubmit="handleAptRequest(event)">
+                        <select id="facSelect" class="input-style" required></select>
                         <input type="text" id="aptReason" placeholder="Reason for meeting" required class="input-style">
                         <input type="datetime-local" id="aptTime" required class="input-style">
                         <button type="submit" class="btn-submit">Send Request</button>
@@ -116,7 +102,7 @@
                 </div>
                 <div class="card" style="margin-top:20px;">
                     <h3>My Requests Status</h3>
-                    <div id="aptStatusList"></div>
+                    <div id="aptStatusList">Loading...</div>
                 </div>
             </div>
 
@@ -124,23 +110,34 @@
                 <div class="faculty-grid" id="facultyStatusList"></div>
             </div>
 
-            <div id="timetable" class="tab-content" style="display: none;">
-                <div class="card" id="timetableContainer"></div>
-            </div>
-
             <div id="gatepass" class="tab-content" style="display: none;">
                 <div class="card">
                     <h3>Apply for Gatepass</h3>
                     <form onsubmit="requestGatepass(event)">
-                        <input type="text" id="gpReason" placeholder="Reason" class="input-style" required>
+                        <input type="text" id="gpReason" placeholder="Reason (e.g. Health, Family)" class="input-style" required>
                         <input type="time" id="gpTime" class="input-style" required>
                         <button class="btn-submit">Apply Now</button>
                     </form>
                 </div>
             </div>
 
+            <div id="medical" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h3>Apply Medical Leave</h3>
+                    <form onsubmit="requestMedical(event)">
+                        <input type="text" id="mlIllness" placeholder="Illness / Reason" class="input-style" required>
+                        <input type="text" id="mlDuration" placeholder="Duration (e.g. 2 Days)" class="input-style" required>
+                        <button class="btn-submit">Submit Medical Request</button>
+                    </form>
+                </div>
+            </div>
+
             <div id="profile" class="tab-content" style="display: none;">
                 <div id="profileIDCard"></div>
+            </div>
+
+            <div id="timetable" class="tab-content" style="display: none;">
+                <div class="card" id="timetableContainer"></div>
             </div>
 
         </main>
@@ -154,13 +151,15 @@
             document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             document.getElementById(tabId).style.display = 'block';
-            event.currentTarget.classList.add('active');
+            
+            // Set Tab Title
+            const titles = { 'academics': 'Academic Overview', 'appointments': 'Meeting Requests', 'availability': 'Faculty Live Status', 'gatepass': 'Gatepass Application', 'medical': 'Medical Leave', 'profile': 'My Profile', 'timetable': 'Time Table' };
+            document.getElementById("tabTitle").innerText = titles[tabId] || "Dashboard";
 
             if(tabId === 'availability') loadFacultyLiveStatus();
             if(tabId === 'appointments') { loadFacultyDropdown(); loadMyAppointments(); }
             if(tabId === 'academics') loadERPData();
             if(tabId === 'profile') loadProfileCard();
-            if(tabId === 'timetable') loadClassTimetable();
         }
 
         window.onload = () => {
@@ -171,43 +170,29 @@
             loadERPData();
         };
 
-        // --- Appointment Logic ---
-        async function loadFacultyDropdown() {
-            const res = await fetch(`${API_BASE}/teachers`);
-            const teachers = await res.json();
-            document.getElementById("facSelect").innerHTML = '<option value="">Select Faculty</option>' + 
-                teachers.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
-        }
-
-        async function handleAptRequest(e) {
+        // --- Gatepass & Medical Logic (Debugged) ---
+        async function requestGatepass(e) {
             e.preventDefault();
-            const data = {
-                studentId: user._id,
-                studentName: user.name,
-                teacherId: document.getElementById("facSelect").value,
-                reason: document.getElementById("aptReason").value,
-                time: document.getElementById("aptTime").value
-            };
-            const res = await fetch(`${API_BASE}/book-appointment`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-            if(res.ok) { alert("Request Sent!"); loadMyAppointments(); }
+            const data = { studentId: user._id, studentName: user.name, department: user.department, reason: document.getElementById("gpReason").value, outTime: document.getElementById("gpTime").value };
+            const res = await fetch(`${API_BASE}/apply-gatepass`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            if(res.ok) alert("✅ Gatepass Sent!");
         }
 
-        async function loadMyAppointments() {
-            const res = await fetch(`${API_BASE}/my-appointments/${user._id}`);
-            const data = await res.json();
-            document.getElementById("aptStatusList").innerHTML = data.map(a => `
-                <div class="apt-card">
-                    <div>
-                        <strong>${a.teacherName}</strong><br>
-                        <small>${new Date(a.time).toLocaleString()}</small>
-                    </div>
-                    <span class="status-pill status-${a.status.toLowerCase()}">${a.status}</span>
-                </div>
-            `).join('') || "No requests found.";
+        async function requestMedical(e) {
+            e.preventDefault();
+            const data = { studentId: user._id, studentName: user.name, department: user.department, illness: document.getElementById("mlIllness").value, duration: document.getElementById("mlDuration").value };
+            const res = await fetch(`${API_BASE}/apply-medical`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            if(res.ok) alert("✅ Medical Request Sent!");
+        }
+
+        // --- Faculty Dropdown ---
+        async function loadFacultyDropdown() {
+            try {
+                const res = await fetch(`${API_BASE}/teachers`);
+                const teachers = await res.json();
+                document.getElementById("facSelect").innerHTML = '<option value="">Select Faculty</option>' + 
+                    teachers.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
+            } catch(e) { console.log("Faculty load error"); }
         }
 
         // --- Live Faculty Status ---
@@ -216,9 +201,7 @@
             const teachers = await res.json();
             document.getElementById("facultyStatusList").innerHTML = teachers.map(t => `
                 <div class="fac-card">
-                    <div class="avatar-circle" style="margin: 0 auto 10px; width:60px; height:60px; font-size:24px; border:2px solid #eee;">
-                        <i class="fas fa-user-tie"></i>
-                    </div>
+                    <i class="fas fa-user-tie" style="font-size:40px; color:#ddd; margin-bottom:10px;"></i>
                     <h4>Prof. ${t.name}</h4>
                     <p><span class="status-indicator" style="background: ${t.status.includes('Available') ? '#27ae60' : '#d32f2f'}"></span> 
                     ${t.status}</p>
@@ -227,14 +210,19 @@
             `).join('');
         }
 
-        // --- Timetable logic ---
-        async function loadClassTimetable() {
-            const container = document.getElementById("timetableContainer");
-            container.innerHTML = "<h3>Class Schedule (BCA Sem 6 Section C)</h3><p>Loading automated schedule...</p>";
-            // Logic linked to app.js fetch
+        // --- My Appointments ---
+        async function loadMyAppointments() {
+            try {
+                const res = await fetch(`${API_BASE}/my-appointments/${user._id}`);
+                const data = await res.json();
+                document.getElementById("aptStatusList").innerHTML = data.map(a => `
+                    <div class="apt-card">
+                        <div><strong>${a.teacherName}</strong><br><small>${a.time}</small></div>
+                        <span class="status-pill status-${a.status.toLowerCase()}">${a.status}</span>
+                    </div>
+                `).join('') || "No requests found.";
+            } catch(e) { document.getElementById("aptStatusList").innerText = "Error loading data."; }
         }
-
-        function logout() { localStorage.clear(); window.location.href="login.html"; }
     </script>
 </body>
 </html>

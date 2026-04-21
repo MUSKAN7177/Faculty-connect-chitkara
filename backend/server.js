@@ -17,23 +17,29 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-transporter.verify((error) => {
-    if (error) console.log("❌ Nodemailer Error:", error);
-    else console.log("✅ NODEMAILER IS READY!");
-});
-
 // 🛠️ 2. DATABASE CONNECTION
 const dbURI = process.env.MONGO_URI || "mongodb+srv://muskanahuja:muskan78140@cluster0.auuqv3k.mongodb.net/BCA_Project?retryWrites=true&w=majority";
 mongoose.connect(dbURI)
     .then(() => console.log("✅ MongoDB Atlas Connected"))
     .catch(err => console.log("❌ DB Connection Error:", err));
 
-// 📝 3. SCHEMAS (Added Department for filtering)
+// 📝 3. SCHEMAS
+
+// --- BUG 1 FIXED: Added Appointment Schema (Jo teacher dashboard mang raha hai) ---
+const AppointmentSchema = new mongoose.Schema({
+    studentId: String,
+    studentName: String,
+    teacherId: String,
+    teacherName: String,
+    reason: String,
+    time: String,
+    status: { type: String, default: "Pending" }
+});
 
 const GatepassSchema = new mongoose.Schema({
-    studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
+    studentId: String, // Simplified for easier matching
     studentName: String,
-    department: String, // Added
+    department: String,
     reason: String,
     outTime: String,
     status: { type: String, default: "Pending" },
@@ -41,9 +47,9 @@ const GatepassSchema = new mongoose.Schema({
 });
 
 const MedicalLeaveSchema = new mongoose.Schema({
-    studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
+    studentId: String,
     studentName: String,
-    department: String, // Added
+    department: String,
     illness: String,
     duration: String,
     documentLink: String,
@@ -58,6 +64,7 @@ const TeacherSchema = new mongoose.Schema({
     department: String,
     semester: [String],
     status: { type: String, default: "Available" },
+    cabin: { type: String, default: "Not Set" }, // Added for Student Dashboard
     notifications: { type: Array, default: [] }, 
     ownTimetable: { type: Array, default: [] }
 });
@@ -82,9 +89,34 @@ const Teacher = mongoose.model("Teacher", TeacherSchema);
 const Student = mongoose.model("Student", StudentSchema);
 const Gatepass = mongoose.model("Gatepass", GatepassSchema);
 const MedicalLeave = mongoose.model("MedicalLeave", MedicalLeaveSchema);
+const Appointment = mongoose.model("Appointment", AppointmentSchema);
 
 // 🚀 4. UPDATED ROUTES
 
+// --- BUG 2 FIXED: Added Appointment Routes (Student book karega, Teacher dekhega) ---
+app.post("/book-appointment", async (req, res) => {
+    try {
+        const apt = new Appointment(req.body);
+        await apt.save();
+        res.json({ success: true, msg: "Request Sent!" });
+    } catch (err) { res.status(500).json({ success: false }); }
+});
+
+app.get("/teacher-appointments/:teacherId", async (req, res) => {
+    res.json(await Appointment.find({ teacherId: req.params.teacherId }));
+});
+
+app.get("/my-appointments/:studentId", async (req, res) => {
+    res.json(await Appointment.find({ studentId: req.params.studentId }));
+});
+
+app.post("/update-appointment", async (req, res) => {
+    const { aptId, status } = req.body;
+    await Appointment.findByIdAndUpdate(aptId, { status });
+    res.json({ success: true });
+});
+
+// Update Teacher Live Status
 app.post("/update-status", async (req, res) => {
     const { teacherId, status } = req.body;
     try {
@@ -93,6 +125,7 @@ app.post("/update-status", async (req, res) => {
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
+// Update Student Records
 app.post("/update-student/:id", async (req, res) => {
     const { attendance, category, marksValue } = req.body;
     try {

@@ -89,7 +89,6 @@ function checkAutoStatus() {
 
     const statusText = currentStatus === "Busy" ? `🔴 In Class at ${currentLoc}` : "🟢 Available in Cabin";
     
-    // Update UI and Database
     if(document.getElementById("statusSelect")) {
         document.getElementById("statusSelect").value = currentStatus;
     }
@@ -98,7 +97,7 @@ function checkAutoStatus() {
 
 async function syncStatusToDB(statusText) {
     const user = JSON.parse(localStorage.getItem("user"));
-    if(!user || user.role !== 'teacher') return;
+    if(!user || localStorage.getItem("userRole") !== 'teacher') return;
     try {
         await fetch(`${API_BASE}/update-status`, {
             method: 'POST',
@@ -111,13 +110,11 @@ async function syncStatusToDB(statusText) {
 // ==========================================
 // 3. TEACHER: MANAGE RECORDS & APPROVALS
 // ==========================================
-
-// Load Students based on Profile Selection (Sem & Sec)
 async function loadTeacherData() {
     const user = JSON.parse(localStorage.getItem("user"));
     const sem = localStorage.getItem("activeSem");
     const sec = localStorage.getItem("activeSec");
-    const cat = document.getElementById("marksCategory").value;
+    const cat = document.getElementById("marksCategory") ? document.getElementById("marksCategory").value : "st1";
 
     if(!sem || !sec) return;
 
@@ -140,46 +137,20 @@ async function loadTeacherData() {
     } catch (e) { console.error("Error loading student records", e); }
 }
 
-// Triple Approval Hub (Apt, Gatepass, ML)
-async function loadAllApprovals() {
-    const user = JSON.parse(localStorage.getItem("user"));
-    const container = document.getElementById("requestList");
-    if(!container) return;
+// Fixed saveData function
+async function saveData(studentId) {
+    const attendance = document.getElementById(`att-${studentId}`).value;
+    const marksValue = document.getElementById(`marks-${studentId}`).value;
+    const category = document.getElementById("marksCategory").value;
 
     try {
-        const [aptRes, gpRes, mlRes] = await Promise.all([
-            fetch(`${API_BASE}/teacher-appointments/${user._id}`),
-            fetch(`${API_BASE}/teacher-gatepasses/${user.department}`),
-            fetch(`${API_BASE}/teacher-medical/${user.department}`)
-        ]);
-
-        const apts = await aptRes.json();
-        const gps = await gpRes.json();
-        const mls = await mlRes.json();
-
-        container.innerHTML = ""; // Clear loader
-
-        apts.forEach(a => { if(a.status === 'Pending') container.innerHTML += renderCard(a, 'Appointment', 'updateApt'); });
-        gps.forEach(g => { if(g.status === 'Pending') container.innerHTML += renderCard(g, 'Gatepass', 'updateGP'); });
-        mls.forEach(m => { if(m.status === 'Pending') container.innerHTML += renderCard(m, 'Medical Leave', 'updateML'); });
-
-    } catch (e) { container.innerHTML = "Error loading approvals."; }
-}
-
-function renderCard(data, type, actionFunc) {
-    return `
-        <div class="request-card" style="border-left: 5px solid var(--chitkara-red); margin-bottom:10px; padding:15px; background:white; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <span style="font-size:10px; background:#eee; padding:2px 5px; border-radius:3px;">${type}</span><br>
-                <strong>${data.studentName}</strong><br>
-                <small>${data.reason || data.illness} | ${data.time || 'Duration: '+data.duration}</small>
-            </div>
-            <div>
-                <button onclick="${actionFunc}('${data._id}', 'Approved')" class="btn-approve">Approve</button>
-                <button onclick="${actionFunc}('${data._id}', 'Declined')" class="btn-decline">Decline</button>
-            </div>
-        </div>
-    `;
+        const res = await fetch(`${API_BASE}/update-student/${studentId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ attendance, category, marksValue })
+        });
+        if(res.ok) alert("✅ Record Updated!");
+    } catch (e) { alert("❌ Update Failed"); }
 }
 
 // ==========================================
@@ -187,26 +158,50 @@ function renderCard(data, type, actionFunc) {
 // ==========================================
 async function loadERPData() {
     const user = JSON.parse(localStorage.getItem("user"));
+    if(!user) return;
     try {
-        const res = await fetch(`${API_BASE}/students`);
+        // Updated to use filters for accurate data fetch
+        const res = await fetch(`${API_BASE}/students?dept=${user.department}&semester=${user.semester}&section=${user.section}`);
         const all = await res.json();
         const me = all.find(s => s._id === user._id);
         if(me) {
-            document.getElementById("myAttVal").innerText = (me.attendance || 0) + "%";
-            document.getElementById("barVisual").style.width = (me.attendance || 0) + "%";
+            if(document.getElementById("myAttVal")) document.getElementById("myAttVal").innerText = (me.attendance || 0) + "%";
+            if(document.getElementById("barVisual")) document.getElementById("barVisual").style.width = (me.attendance || 0) + "%";
             const m = me.marks || {};
-            document.getElementById("marksBody").innerHTML = `
-                <tr><td>ST1</td><td>${m.st1 || 0}</td></tr>
-                <tr><td>ST2</td><td>${m.st2 || 0}</td></tr>
-                <tr><td>Assignments</td><td>${m.assignment || 0}</td></tr>
-            `;
+            const marksBody = document.getElementById("marksBody");
+            if(marksBody) {
+                marksBody.innerHTML = `
+                    <tr><td>ST1</td><td>${m.st1 || 0}</td></tr>
+                    <tr><td>ST2</td><td>${m.st2 || 0}</td></tr>
+                    <tr><td>Assignments</td><td>${m.assignment || 0}</td></tr>
+                `;
+            }
         }
     } catch (e) { console.error(e); }
+}
+
+// Added missing Profile Loader for Student/Teacher
+function loadProfileCard() {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const container = document.getElementById("profileIDCard") || document.getElementById("tProfileIDCard");
+    if(!container || !user) return;
+
+    container.innerHTML = `
+        <div class="card" style="text-align: center; border-top: 5px solid var(--chitkara-navy); padding: 20px;">
+            <i class="fas fa-user-circle" style="font-size: 60px; color: var(--chitkara-navy); margin-bottom: 15px;"></i>
+            <h2>${user.name}</h2>
+            <p><strong>ID/Roll No:</strong> ${user.rollNo || user.universityId}</p>
+            <p><strong>Department:</strong> ${user.department}</p>
+            <p><strong>Semester:</strong> ${user.semester || 'N/A'}</p>
+            <p><strong>Email:</strong> ${user.email}</p>
+        </div>
+    `;
 }
 
 // Appointment Booking
 async function handleAptRequest(e) {
     e.preventDefault();
+    const user = JSON.parse(localStorage.getItem("user"));
     const data = {
         studentId: user._id,
         studentName: user.name,
@@ -219,13 +214,16 @@ async function handleAptRequest(e) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
     });
-    if(res.ok) { alert("✅ Appointment Request Sent!"); loadMyAppointments(); }
+    if(res.ok) { 
+        alert("✅ Appointment Request Sent!"); 
+        if(typeof loadMyAppointments === "function") loadMyAppointments(); 
+    }
 }
 
 // ==========================================
 // 5. UTILS & TIMERS
 // ==========================================
-function logout() { localStorage.clear(); window.location.href="role.html"; }
+function logout() { localStorage.clear(); window.location.href = "login.html"; }
 
 // Start auto-check if teacher
 if(localStorage.getItem("userRole") === 'teacher') {
