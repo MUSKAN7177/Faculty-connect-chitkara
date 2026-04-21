@@ -8,9 +8,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 📧 1. Nodemailer Configuration (Updated for Stability)
+// 📧 1. Nodemailer Configuration
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // Direct service use karne se stability badhti hai
+    service: 'gmail',
     auth: {
         user: process.env.EMAIL_USER || "muskan7177.ca23@chitkara.edu.in",
         pass: process.env.EMAIL_PASS || "ntwnciimormgudgg" 
@@ -28,25 +28,23 @@ mongoose.connect(dbURI)
     .then(() => console.log("✅ MongoDB Atlas Connected"))
     .catch(err => console.log("❌ DB Connection Error:", err));
 
-// 📝 3. SCHEMAS (Updated with Gatepass & Medical Leave)
+// 📝 3. SCHEMAS
 
-// Gatepass Schema
 const GatepassSchema = new mongoose.Schema({
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
     studentName: String,
     reason: String,
     outTime: String,
-    status: { type: String, default: "Pending" }, // Pending, Approved, Rejected
+    status: { type: String, default: "Pending" },
     date: { type: Date, default: Date.now }
 });
 
-// Medical Leave Schema
 const MedicalLeaveSchema = new mongoose.Schema({
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
     studentName: String,
     illness: String,
     duration: String,
-    documentLink: String, // Medical certificate link
+    documentLink: String,
     status: { type: String, default: "Pending" }
 });
 
@@ -69,68 +67,56 @@ const StudentSchema = new mongoose.Schema({
     password: String, 
     department: String,
     semester: String,
+    section: { type: String, default: "A" }, // <-- Added for Section filtering
     attendance: { type: Number, default: 0 },
     marks: {
         st1: { type: Number, default: 0 },
-        st2: { type: Number, default: 0 }
+        st2: { type: Number, default: 0 },
+        assignment: { type: Number, default: 0 } // <-- Added for consistency
     }
-});
-
-const NotesSchema = new mongoose.Schema({
-    subject: String,
-    teacherName: String,
-    link: String,
-    category: { type: String, default: 'note' }, 
-    date: { type: Date, default: Date.now }
 });
 
 const Teacher = mongoose.model("Teacher", TeacherSchema);
 const Student = mongoose.model("Student", StudentSchema);
-const Notes = mongoose.model("Notes", NotesSchema);
 const Gatepass = mongoose.model("Gatepass", GatepassSchema);
 const MedicalLeave = mongoose.model("MedicalLeave", MedicalLeaveSchema);
 
-// 🚀 4. NEW ROUTES (Gatepass & Medical Leave)
+// 🚀 4. NEW UPDATED ROUTES
 
-// Request Gatepass
-app.post("/request-gatepass", async (req, res) => {
+// Update Teacher Live Status (Used by checkAutoStatus in app.js)
+app.post("/update-status", async (req, res) => {
+    const { teacherId, status } = req.body;
     try {
-        const newGatepass = new Gatepass(req.body);
-        await newGatepass.save();
-        res.json({ success: true, msg: "Gatepass Request Sent!" });
+        await Teacher.findByIdAndUpdate(teacherId, { status });
+        res.json({ success: true, msg: "Status Updated" });
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
-// Approve/Reject Gatepass (With Email)
-app.post("/update-gatepass", async (req, res) => {
-    const { passId, status } = req.body;
+// Update Student Records (Single Update from Teacher Dashboard)
+app.post("/update-student/:id", async (req, res) => {
+    const { attendance, category, marksValue } = req.body;
     try {
-        const pass = await Gatepass.findByIdAndUpdate(passId, { status }, { new: true }).populate('studentId');
+        const updateData = { attendance };
+        updateData[`marks.${category}`] = marksValue;
         
-        if (pass && pass.studentId.email) {
-            const mailOptions = {
-                from: "muskan7177.ca23@chitkara.edu.in",
-                to: pass.studentId.email,
-                subject: `Gatepass Status: ${status}`,
-                text: `Hi ${pass.studentName},\n\nYour Gatepass request for "${pass.reason}" has been ${status}.\n\nRegards,\nChitkara University Admin`
-            };
-            transporter.sendMail(mailOptions);
-        }
-        res.json({ success: true, msg: `Gatepass ${status}` });
+        await Student.findByIdAndUpdate(req.params.id, { $set: updateData });
+        res.json({ success: true });
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
-// Request Medical Leave
-app.post("/request-medical", async (req, res) => {
-    try {
-        const newLeave = new MedicalLeave(req.body);
-        await newLeave.save();
-        res.json({ success: true, msg: "Medical Leave Request Submitted!" });
-    } catch (err) { res.status(500).json({ success: false }); }
+// 🚀 5. EXISTING ROUTES (Minor Tweaks for Filtering)
+
+app.get("/students", async (req, res) => {
+    const { dept, semester, section } = req.query;
+    let filter = {};
+    if(dept) filter.department = dept;
+    if(semester) filter.semester = semester;
+    if(section) filter.section = section;
+    
+    res.json(await Student.find(filter));
 });
 
-// 🚀 5. EXISTING AUTH & ACADEMIC ROUTES (Optimized)
-
+// Auth Routes (Signup & Login)
 app.post("/signup", async (req, res) => {
     try {
         const { role, ...details } = req.body;
@@ -150,35 +136,13 @@ app.post("/login", async (req, res) => {
             const userData = user.toObject();
             delete userData.password;
             res.json({ success: true, user: userData });
-        } else {
-            res.json({ success: false, msg: "Invalid Credentials!" });
-        }
+        } else { res.json({ success: false, msg: "Invalid Credentials!" }); }
     } catch (err) { res.status(500).json({ success: false, msg: "Server Error" }); }
 });
 
-// 📊 ACADEMIC ROUTES (With Email Alert)
-app.post("/update-academics", async (req, res) => {
-    try {
-        const { studentId, attendance, marks } = req.body;
-        const student = await Student.findByIdAndUpdate(studentId, { attendance, marks }, { new: true });
-
-        if (student && Number(attendance) < 75) {
-            const mailOptions = {
-                from: "muskan7177.ca23@chitkara.edu.in",
-                to: student.email,
-                subject: "⚠️ Low Attendance Alert",
-                text: `Hi ${student.name}, your attendance is ${attendance}%. Please maintain 75%.`
-            };
-            transporter.sendMail(mailOptions);
-        }
-        res.json({ success: true, msg: "Records updated!" });
-    } catch (err) { res.status(500).json({ success: false }); }
-});
-
-// 📚 FETCH ROUTES
-app.get("/gatepasses", async (req, res) => res.json(await Gatepass.find().sort({ date: -1 })));
-app.get("/medical-leaves", async (req, res) => res.json(await MedicalLeave.find()));
-app.get("/students", async (req, res) => res.json(await Student.find()));
+// Fetch All Requests for Teachers
+app.get("/teacher-gatepasses/:dept", async (req, res) => res.json(await Gatepass.find({ department: req.params.dept, status: "Pending" })));
+app.get("/teacher-medical/:dept", async (req, res) => res.json(await MedicalLeave.find({ department: req.params.dept, status: "Pending" })));
 app.get("/teachers", async (req, res) => res.json(await Teacher.find()));
 
 const PORT = process.env.PORT || 10000;
