@@ -28,11 +28,12 @@ mongoose.connect(dbURI)
     .then(() => console.log("✅ MongoDB Atlas Connected"))
     .catch(err => console.log("❌ DB Connection Error:", err));
 
-// 📝 3. SCHEMAS
+// 📝 3. SCHEMAS (Added Department for filtering)
 
 const GatepassSchema = new mongoose.Schema({
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
     studentName: String,
+    department: String, // Added
     reason: String,
     outTime: String,
     status: { type: String, default: "Pending" },
@@ -42,6 +43,7 @@ const GatepassSchema = new mongoose.Schema({
 const MedicalLeaveSchema = new mongoose.Schema({
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
     studentName: String,
+    department: String, // Added
     illness: String,
     duration: String,
     documentLink: String,
@@ -67,12 +69,12 @@ const StudentSchema = new mongoose.Schema({
     password: String, 
     department: String,
     semester: String,
-    section: { type: String, default: "A" }, // <-- Added for Section filtering
+    section: { type: String, default: "A" },
     attendance: { type: Number, default: 0 },
     marks: {
         st1: { type: Number, default: 0 },
         st2: { type: Number, default: 0 },
-        assignment: { type: Number, default: 0 } // <-- Added for consistency
+        assignment: { type: Number, default: 0 }
     }
 });
 
@@ -81,9 +83,8 @@ const Student = mongoose.model("Student", StudentSchema);
 const Gatepass = mongoose.model("Gatepass", GatepassSchema);
 const MedicalLeave = mongoose.model("MedicalLeave", MedicalLeaveSchema);
 
-// 🚀 4. NEW UPDATED ROUTES
+// 🚀 4. UPDATED ROUTES
 
-// Update Teacher Live Status (Used by checkAutoStatus in app.js)
 app.post("/update-status", async (req, res) => {
     const { teacherId, status } = req.body;
     try {
@@ -92,31 +93,32 @@ app.post("/update-status", async (req, res) => {
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
-// Update Student Records (Single Update from Teacher Dashboard)
 app.post("/update-student/:id", async (req, res) => {
     const { attendance, category, marksValue } = req.body;
     try {
-        const updateData = { attendance };
-        updateData[`marks.${category}`] = marksValue;
+        const updateData = {};
+        if(attendance !== undefined) updateData.attendance = attendance;
+        if(category && marksValue !== undefined) updateData[`marks.${category}`] = marksValue;
         
         await Student.findByIdAndUpdate(req.params.id, { $set: updateData });
         res.json({ success: true });
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
-// 🚀 5. EXISTING ROUTES (Minor Tweaks for Filtering)
-
+// GET Students with strict filtering
 app.get("/students", async (req, res) => {
-    const { dept, semester, section } = req.query;
-    let filter = {};
-    if(dept) filter.department = dept;
-    if(semester) filter.semester = semester;
-    if(section) filter.section = section;
-    
-    res.json(await Student.find(filter));
+    try {
+        const { dept, semester, section } = req.query;
+        let filter = {};
+        if(dept && dept !== "undefined") filter.department = dept;
+        if(semester && semester !== "undefined") filter.semester = semester;
+        if(section && section !== "undefined") filter.section = section;
+        
+        const data = await Student.find(filter);
+        res.json(data);
+    } catch (e) { res.status(500).json([]); }
 });
 
-// Auth Routes (Signup & Login)
 app.post("/signup", async (req, res) => {
     try {
         const { role, ...details } = req.body;
@@ -140,9 +142,14 @@ app.post("/login", async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, msg: "Server Error" }); }
 });
 
-// Fetch All Requests for Teachers
-app.get("/teacher-gatepasses/:dept", async (req, res) => res.json(await Gatepass.find({ department: req.params.dept, status: "Pending" })));
-app.get("/teacher-medical/:dept", async (req, res) => res.json(await MedicalLeave.find({ department: req.params.dept, status: "Pending" })));
+app.get("/teacher-gatepasses/:dept", async (req, res) => {
+    res.json(await Gatepass.find({ department: req.params.dept, status: "Pending" }));
+});
+
+app.get("/teacher-medical/:dept", async (req, res) => {
+    res.json(await MedicalLeave.find({ department: req.params.dept, status: "Pending" }));
+});
+
 app.get("/teachers", async (req, res) => res.json(await Teacher.find()));
 
 const PORT = process.env.PORT || 10000;
