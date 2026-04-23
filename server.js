@@ -12,8 +12,8 @@ app.use(express.json());
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER || "muskan7177.ca23@chitkara.edu.in",
-        pass: process.env.EMAIL_PASS || "ntwnciimormgudgg" 
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     }
 });
 
@@ -23,7 +23,8 @@ mongoose.connect(dbURI)
     .then(() => console.log("✅ MongoDB Atlas Connected"))
     .catch(err => console.log("❌ DB Connection Error:", err));
 
-// 📝 3. SCHEMAS (Updated with New Features)
+// 📝 3. SCHEMAS & MODELS
+// Note: Inhe models folder mein hona chahiye, par yahan define karne se error nahi aayega.
 const ResourceSchema = new mongoose.Schema({
     teacherId: String,
     teacherName: String,
@@ -40,7 +41,7 @@ const TeacherSchema = new mongoose.Schema({
     email: String, 
     password: String, 
     department: String,
-    status: { type: String, default: "Available" }, // Real-time Status
+    status: { type: String, default: "Available" },
     cabin: { type: String, default: "Not Set" },
     lastUpdated: { type: Date, default: Date.now }
 });
@@ -76,9 +77,9 @@ const Student = mongoose.model("Student", StudentSchema);
 const Appointment = mongoose.model("Appointment", AppointmentSchema);
 const Resource = mongoose.model("Resource", ResourceSchema);
 
-// 🚀 4. FINAL ROUTES
+// 🚀 4. ROUTES
 
-// --- 📈 FEATURE: Update Attendance & Marks + 75% Alert ---
+// --- Attendance & Marks ---
 app.post("/update-student-data", async (req, res) => {
     const { studentId, attendance, st1, st2, assignment, teacherName } = req.body;
     try {
@@ -91,21 +92,20 @@ app.post("/update-student-data", async (req, res) => {
         
         const student = await Student.findByIdAndUpdate(studentId, updateData, { new: true });
         
-        // AUTOMATIC 75% ATTENDANCE EMAIL ALERT
-        if (Number(attendance) < 75) {
+        if (Number(attendance) < 75 && student.email) {
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: student.email,
                 subject: `⚠️ Low Attendance Warning - Faculty Connect`,
-                text: `Dear ${student.name},\n\nYour attendance in the current semester is ${attendance}%, which is below the required 75%. Please meet Prof. ${teacherName} as soon as possible to avoid detention.`
+                text: `Dear ${student.name},\n\nYour attendance is ${attendance}%, which is below 75%. Meet Prof. ${teacherName} ASAP.`
             };
-            await transporter.sendMail(mailOptions);
+            transporter.sendMail(mailOptions);
         }
         res.json({ success: true, student });
     } catch (e) { res.status(500).json({ success: false }); }
 });
 
-// --- 🤖 FEATURE: Faculty Status Sync (IoT Ready) ---
+// --- Faculty Status Sync ---
 app.post("/update-faculty-status", async (req, res) => {
     const { teacherId, status } = req.body;
     try {
@@ -114,7 +114,7 @@ app.post("/update-faculty-status", async (req, res) => {
     } catch (e) { res.status(500).json({ success: false }); }
 });
 
-// --- 📁 FEATURE: Resource & Timetable Upload ---
+// --- Resources ---
 app.post("/upload-resource", async (req, res) => {
     try {
         const newResource = new Resource(req.body);
@@ -130,59 +130,69 @@ app.get("/get-resources", async (req, res) => {
     } catch (e) { res.json([]); }
 });
 
-// --- 📅 APPOINTMENTS & CONFLICT DETECTION ---
+// --- Appointments ---
 app.post("/book-appointment", async (req, res) => {
     const { teacherId, time } = req.body;
-    // Basic Conflict Check
-    const existing = await Appointment.findOne({ teacherId, time, status: "Approved" });
-    if (existing) {
-        return res.json({ success: false, message: "This slot is already booked!" });
-    }
-    const apt = new Appointment(req.body);
-    await apt.save();
-    res.json({ success: true });
+    try {
+        const existing = await Appointment.findOne({ teacherId, time, status: "Approved" });
+        if (existing) return res.json({ success: false, message: "Slot already booked!" });
+        
+        const apt = new Appointment(req.body);
+        await apt.save();
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false }); }
 });
 
 app.post("/update-appointment", async (req, res) => {
     const { aptId, status, studentEmail, teacherName } = req.body;
     try {
         await Appointment.findByIdAndUpdate(aptId, { status });
-        
-        // Notify Student via Email
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: studentEmail,
-            subject: `Appointment ${status} - Faculty Connect`,
-            text: `Your appointment request with Prof. ${teacherName} has been ${status}. Please check your dashboard for details.`
-        };
-        await transporter.sendMail(mailOptions);
+        if (studentEmail) {
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: studentEmail,
+                subject: `Appointment ${status}`,
+                text: `Your appointment with Prof. ${teacherName} is ${status}.`
+            };
+            transporter.sendMail(mailOptions);
+        }
         res.json({ success: true });
     } catch (e) { res.status(500).json({ success: false }); }
 });
 
-// --- 🔑 AUTH & UTILITY ROUTES ---
+// --- Auth ---
 app.post("/login", async (req, res) => {
     const { email, password, role } = req.body;
-    const Model = (role === "student") ? Student : Teacher;
-    const user = await Model.findOne({ email, password });
-    if (user) res.json({ success: true, user });
-    else res.json({ success: false });
+    try {
+        const Model = (role === "student") ? Student : Teacher;
+        const user = await Model.findOne({ email, password });
+        if (user) res.json({ success: true, user });
+        else res.json({ success: false });
+    } catch (e) { res.status(500).json({ success: false }); }
 });
 
 app.post("/signup", async (req, res) => {
-    const Model = (req.body.role === "student") ? Student : Teacher;
-    const newUser = new Model(req.body);
-    await newUser.save();
-    res.json({ success: true });
+    try {
+        const Model = (req.body.role === "student") ? Student : Teacher;
+        const newUser = new Model(req.body);
+        await newUser.save();
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false }); }
 });
 
 app.get("/teachers", async (req, res) => res.json(await Teacher.find()));
 
 app.get("/students-by-class", async (req, res) => {
     const { semester, section } = req.query;
-    res.json(await Student.find({ semester, section }));
+    try {
+        const students = await Student.find({ semester, section });
+        res.json(students);
+    } catch (e) { res.status(500).json([]); }
 });
+
+// --- Home Route for Render Health Check ---
+app.get("/", (req, res) => res.send("Chitkara Faculty Connect API is Live!"));
 
 // --- PORT SETUP ---
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Professional ERP Backend Running on Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server Running on Port ${PORT}`));
