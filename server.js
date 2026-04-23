@@ -24,7 +24,6 @@ mongoose.connect(dbURI)
     .catch(err => console.log("❌ DB Connection Error:", err));
 
 // 📝 3. SCHEMAS & MODELS
-// Note: Inhe models folder mein hona chahiye, par yahan define karne se error nahi aayega.
 const ResourceSchema = new mongoose.Schema({
     teacherId: String,
     teacherName: String,
@@ -114,12 +113,20 @@ app.post("/update-faculty-status", async (req, res) => {
     } catch (e) { res.status(500).json({ success: false }); }
 });
 
-// --- Resources ---
+// --- Resources (Timetable & Notes) ---
 app.post("/upload-resource", async (req, res) => {
     try {
-        const newResource = new Resource(req.body);
+        const { teacherId, teacherName, title, link, type } = req.body;
+        const newResource = new Resource({
+            teacherId,
+            teacherName,
+            title,
+            link,
+            type,
+            date: Date.now()
+        });
         await newResource.save();
-        res.json({ success: true });
+        res.json({ success: true, message: "Uploaded Successfully!" });
     } catch (e) { res.status(500).json({ success: false }); }
 });
 
