@@ -3,158 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard | Faculty Connect</title>
+    <title>Admin Dashboard | Faculty Connect ERP</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Admin Specific Professional Styling */
+        :root { --admin-dark: #2c3e50; --chitkara-red: #ed1c24; }
+        .admin-sidebar { background: var(--admin-dark) !important; }
+        .stat-card { border-radius: 10px; padding: 20px; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .bg-teachers { background: linear-gradient(45deg, #1a2a6c, #2a4858); }
+        .bg-gatepass { background: linear-gradient(45deg, #ed1c24, #ff5e62); }
+        .bg-analytics { background: linear-gradient(45deg, #f39c12, #d35400); }
+        .badge { padding: 4px 8px; border-radius: 20px; font-size: 11px; text-transform: uppercase; }
+        .badge-pending { background: #ffeaa7; color: #d35400; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+    </style>
 </head>
 
-<body class="admin-body">
+<body>
+    <div class="sidebar admin-sidebar">
+        <div class="sidebar-header">
+            <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/chitkara-university-logo.png" alt="Logo">
+        </div>
+        <div class="nav-item active" onclick="showTab('analytics', this)"><i class="fas fa-chart-pie"></i> &nbsp; Analytics Overview</div>
+        <div class="nav-item" onclick="showTab('add-faculty', this)"><i class="fas fa-user-plus"></i> &nbsp; Manage Faculty</div>
+        <div class="nav-item" onclick="showTab('approvals', this)"><i class="fas fa-check-double"></i> &nbsp; Pending Approvals</div>
+        <div class="nav-item" style="margin-top: auto; color: #ff7675;" onclick="window.location.href='index.html'"><i class="fas fa-sign-out-alt"></i> &nbsp; Logout</div>
+    </div>
 
-    <div class="admin-container">
-        <header class="admin-header">
-            <h1><i class="fas fa-user-shield"></i> Admin Control Center</h1>
-            <p>Chitkara University | Faculty Connect Management</p>
-        </header>
-
-        <div class="admin-grid">
-            <section class="admin-card">
-                <h3><i class="fas fa-user-plus"></i> Add New Faculty</h3>
-                <div class="form-group">
-                    <input type="text" id="name" placeholder="Faculty Full Name">
-                    <input type="text" id="univId" placeholder="University ID (e.g. T1001)">
-                    <input type="email" id="email" placeholder="Official Email Address">
-                    <input type="password" id="password" placeholder="Temporary Password">
-                    
-                    <select id="dept">
-                        <option value="" disabled selected>Select Department</option>
-                        <option value="BCA">BCA (Computer Applications)</option>
-                        <option value="CSE">CSE (Computer Science)</option>
-                        <option value="MCA">MCA</option>
-                    </select>
-
-                    <button class="btn-primary" onclick="addTeacher()">
-                        <i class="fas fa-save"></i> Register Faculty
-                    </button>
-                </div>
-            </section>
-
-            <section class="admin-card stats-card">
-                <h3><i class="fas fa-chart-line"></i> Quick Overview</h3>
-                <div class="stats-grid">
-                    <div class="stat-item blue">
-                        <span id="teacherCount">0</span>
-                        <label>Teachers</label>
-                    </div>
-                    <div class="stat-item red">
-                        <span id="pendingGatepass">0</span>
-                        <label>Gatepass Req.</label>
-                    </div>
-                    <div class="stat-item orange">
-                        <span id="pendingLeave">0</span>
-                        <label>Medical Leaves</label>
-                    </div>
-                </div>
-            </section>
+    <div class="main-content">
+        <div class="header-bar">
+            <h2><i class="fas fa-shield-alt"></i> Administrative Control Panel</h2>
+            <div>Admin ID: <strong>CU-ADM-01</strong></div>
         </div>
 
-        <section class="admin-card full-width">
-            <h3><i class="fas fa-tasks"></i> Pending Approvals (Gatepass / Leaves)</h3>
-            <div class="table-container">
-                <table id="requestsTable">
-                    <thead>
-                        <tr>
-                            <th>Student Name</th>
-                            <th>Type</th>
-                            <th>Reason/Illness</th>
-                            <th>Date</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
+        <div id="analytics" class="tab-content active">
+            <div class="erp-grid">
+                <div class="stat-card bg-teachers">
+                    <div><h3>Teachers</h3><h2 id="teacherCount">0</h2></div>
+                    <i class="fas fa-chalkboard-teacher fa-2x"></i>
+                </div>
+                <div class="stat-card bg-gatepass">
+                    <div><h3>Total Requests</h3><h2 id="totalReq">0</h2></div>
+                    <i class="fas fa-file-signature fa-2x"></i>
+                </div>
+                <div class="stat-card bg-analytics">
+                    <div><h3>App Usage</h3><h2>High</h2></div>
+                    <i class="fas fa-users fa-2x"></i>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-history"></i> Recent System Activity</h3>
+                <table id="activityTable">
+                    <thead><tr><th>Timestamp</th><th>Action</th><th>User</th><th>Status</th></tr></thead>
+                    <tbody id="activityLog">
+                        <tr><td colspan="4" style="text-align:center;">Fetching system logs...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="add-faculty" class="tab-content">
+            <div class="card" style="max-width: 600px; margin: auto;">
+                <h3><i class="fas fa-user-plus"></i> Register New Faculty</h3>
+                <div class="input-group">
+                    <label>Full Name</label>
+                    <input type="text" id="name" class="input-style" placeholder="e.g. Dr. Pariyat">
+                </div>
+                <div class="input-group">
+                    <label>Official Email</label>
+                    <input type="email" id="email" class="input-style" placeholder="faculty@chitkara.edu.in">
+                </div>
+                <div class="input-group">
+                    <label>Department</label>
+                    <select id="dept" class="input-style">
+                        <option value="BCA">BCA (Computer Applications)</option>
+                        <option value="CSE">CSE (Computer Science)</option>
+                        <option value="MBA">Business School</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Default Password</label>
+                    <input type="password" id="password" class="input-style" value="CU@12345">
+                </div>
+                <button class="btn btn-primary" style="width: 100%; padding: 12px;" onclick="addTeacher()">Create Faculty Account</button>
+            </div>
+        </div>
+
+        <div id="approvals" class="tab-content">
+            <div class="card">
+                <h3><i class="fas fa-tasks"></i> Global Request Management</h3>
+                <table>
+                    <thead><tr><th>Student</th><th>Type</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody id="requestBody">
                         </tbody>
                 </table>
             </div>
-        </section>
+        </div>
     </div>
 
     <script>
-        const API_URL = "https://chitkara-faculty-app-2026.onrender.com";
+        const API_URL = "https://chitkara-faculty-app-2026.onrender.com"; 
 
-        // 1. Add Teacher Function
+        function showTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API_URL}/teachers`);
+                const data = await res.json();
+                document.getElementById("teacherCount").innerText = data.length;
+            } catch (e) { console.log("Stats error"); }
+        }
+
         async function addTeacher() {
             const data = {
                 name: document.getElementById("name").value,
-                universityId: document.getElementById("univId").value,
                 email: document.getElementById("email").value,
                 password: document.getElementById("password").value,
-                role: "teacher",
                 department: document.getElementById("dept").value,
-                status: "Available",
-                notifications: []
+                role: "teacher"
             };
 
+            if(!data.name || !data.email) return alert("All fields are mandatory!");
+
             try {
-                const response = await fetch(`${API_URL}/signup`, {
+                const res = await fetch(`${API_URL}/signup`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(data)
                 });
-                const result = await response.json();
-                if (result.success) {
-                    alert("✅ Faculty Member Added Successfully!");
+                const result = await res.json();
+                if(result.success) {
+                    alert("✅ Faculty Added Successfully!");
                     location.reload();
                 }
-            } catch (err) {
-                alert("❌ Error connecting to server");
-            }
+            } catch (e) { alert("Server error"); }
         }
 
-        // 2. Load Requests (Gatepass & Medical)
-        async function loadRequests() {
-            try {
-                const gpRes = await fetch(`${API_URL}/gatepasses`);
-                const gatepasses = await gpRes.json();
-                
-                const mlRes = await fetch(`${API_URL}/medical-leaves`);
-                const leaves = await mlRes.json();
-
-                const tbody = document.getElementById("requestBody");
-                tbody.innerHTML = "";
-
-                // Displaying counts
-                document.getElementById("pendingGatepass").innerText = gatepasses.filter(g => g.status === 'Pending').length;
-                document.getElementById("pendingLeave").innerText = leaves.filter(l => l.status === 'Pending').length;
-
-                // Merge and show (simplifying for now)
-                gatepasses.forEach(gp => {
-                    if(gp.status === "Pending") {
-                        tbody.innerHTML += `
-                            <tr>
-                                <td>${gp.studentName}</td>
-                                <td><span class="badge gatepass">Gatepass</span></td>
-                                <td>${gp.reason}</td>
-                                <td>${new Date(gp.date).toLocaleDateString()}</td>
-                                <td>
-                                    <button class="btn-approve" onclick="updateStatus('${gp._id}', 'Approved')">Approve</button>
-                                </td>
-                            </tr>
-                        `;
-                    }
-                });
-            } catch (err) { console.log(err); }
-        }
-
-        async function updateStatus(id, status) {
-            await fetch(`${API_URL}/update-gatepass`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ passId: id, status: status })
-            });
-            alert("Status Updated & Email Sent!");
-            loadRequests();
-        }
-
-        window.onload = loadRequests;
+        window.onload = loadStats;
     </script>
 </body>
 </html>

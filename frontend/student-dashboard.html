@@ -13,38 +13,22 @@
             --gold-accent: #ffcc00;
         }
 
-        /* Sidebar Styling */
         .erp-sidebar { background: linear-gradient(180deg, var(--chitkara-navy) 0%, #243b55 100%) !important; height: 100vh; position: fixed; width: 250px; }
-        
-        /* FIX: Active Nav Item highlight */
         .nav-item { cursor: pointer; padding: 15px 20px; color: rgba(255,255,255,0.7); transition: 0.3s; border-left: 5px solid transparent; }
         .nav-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
-        .nav-item.active {
-            background: rgba(255, 255, 255, 0.15) !important;
-            border-left: 5px solid var(--gold-accent) !important;
-            color: #fff !important;
-        }
+        .nav-item.active { background: rgba(255, 255, 255, 0.15) !important; border-left: 5px solid var(--gold-accent) !important; color: #fff !important; }
 
-        /* Layout Fix */
         .dashboard-wrapper { display: flex; }
         .erp-main { margin-left: 250px; width: calc(100% - 250px); min-height: 100vh; background: #f4f7f6; }
 
-        /* Status Cards */
-        .apt-card {
-            background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 10px;
-            display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee;
-        }
-        .status-pill { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
-        .status-pending { background: #fff3cd; color: #856404; }
-        .status-approved { background: #d4edda; color: #155724; }
-        .status-rejected { background: #f8d7da; color: #721c24; }
-
         .faculty-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; padding: 20px; }
         .fac-card { background: #fff; padding: 20px; border-radius: 15px; text-align: center; border-top: 5px solid var(--chitkara-navy); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .status-indicator { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-
+        
         .tab-content { display: none; padding: 25px; }
         .tab-content.active { display: block; }
+        
+        /* Attendance Alert */
+        .att-alert { background: #fff2f2; color: #d32f2f; padding: 10px; border-radius: 8px; margin-top: 10px; font-weight: bold; display: none; border: 1px solid #fab1a0; }
     </style>
 </head>
 <body class="erp-body">
@@ -59,56 +43,39 @@
                 <small id="userDeptDisplay" style="color: var(--gold-accent);"></small>
             </div>
             <ul class="nav-menu" style="list-style: none; padding: 10px 0;">
-                <li onclick="showTab('academics', this)" class="nav-item active"><i class="fas fa-graduation-cap"></i> Academics</li>
+                <li onclick="showTab('academics', this)" class="nav-item active"><i class="fas fa-graduation-cap"></i> Academics/ERP</li>
                 <li onclick="showTab('availability', this)" class="nav-item"><i class="fas fa-user-check"></i> Faculty Status</li>
+                <li onclick="showTab('resources', this)" class="nav-item"><i class="fas fa-file-download"></i> Resources & Notes</li>
                 <li onclick="showTab('appointments', this)" class="nav-item"><i class="fas fa-handshake"></i> Appointments</li>
-                <li onclick="showTab('gatepass', this)" class="nav-item"><i class="fas fa-door-open"></i> Gatepass</li>
-                <li onclick="showTab('medical', this)" class="nav-item"><i class="fas fa-briefcase-medical"></i> Medical Leave</li>
                 <li onclick="showTab('profile', this)" class="nav-item"><i class="fas fa-id-card"></i> My Profile</li>
-                <li onclick="logout()" class="nav-item logout-btn" style="color: #ff7675;"><i class="fas fa-sign-out-alt"></i> Logout</li>
+                <li onclick="logout()" class="nav-item" style="color: #ff7675;"><i class="fas fa-sign-out-alt"></i> Logout</li>
             </ul>
         </nav>
 
         <main class="erp-main">
             <header class="erp-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #fff; border-bottom: 1px solid #ddd;">
                 <h2 id="tabTitle">Academic Overview</h2>
-                <span id="currentDate" class="badge-date" style="color: var(--chitkara-navy); font-weight: 600;"></span>
+                <span id="currentDate" style="color: var(--chitkara-navy); font-weight: 600;"></span>
             </header>
 
             <div id="academics" class="tab-content active">
-                <div class="stats-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <div class="card" style="background: white; padding: 20px; border-radius: 12px;">
-                        <p style="color: #666;">Total Attendance</p>
-                        <h3 id="myAttVal" style="font-size: 2rem; margin: 10px 0;">0%</h3>
-                        <div style="background:#eee; height:10px; border-radius:5px; overflow: hidden;">
-                            <div id="barVisual" style="height:100%; width:0%; background:var(--chitkara-red); transition:1s;"></div>
-                        </div>
+                <div class="card" style="background: white; padding: 20px; border-radius: 12px; border-left: 5px solid var(--chitkara-red);">
+                    <p style="color: #666;">Overall Attendance</p>
+                    <h3 id="myAttVal" style="font-size: 2.5rem; margin: 10px 0;">0%</h3>
+                    <div style="background:#eee; height:10px; border-radius:5px; overflow: hidden;">
+                        <div id="barVisual" style="height:100%; width:0%; background:var(--chitkara-red); transition:1s;"></div>
                     </div>
+                    <div id="attWarning" class="att-alert"><i class="fas fa-exclamation-triangle"></i> Below 75%! Low Attendance.</div>
                 </div>
+                
                 <div class="card" style="margin-top:20px; background: white; padding: 20px; border-radius: 12px;">
-                    <h3>Internal Assessment (STs & Assignments)</h3>
-                    <table class="erp-table" width="100%" style="margin-top: 15px; border-collapse: collapse;">
-                        <thead style="background: #f8f9fa;">
-                            <tr><th style="padding:12px; text-align:left; border-bottom:2px solid #eee;">Component</th><th style="padding:12px; text-align:left; border-bottom:2px solid #eee;">Marks Obtained</th></tr>
-                        </thead>
-                        <tbody id="marksBody"></tbody>
+                    <h3>Sessional Marks</h3>
+                    <table width="100%" style="margin-top: 15px; border-collapse: collapse;">
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 12px;">ST1 Marks</td>
+                            <td id="st1Marks" style="font-weight: bold; text-align: right;">0</td>
+                        </tr>
                     </table>
-                </div>
-            </div>
-
-            <div id="appointments" class="tab-content">
-                <div class="card" style="background: white; padding: 20px; border-radius: 12px;">
-                    <h3>Book New Meeting</h3>
-                    <form onsubmit="handleAptRequest(event)" style="margin-top: 15px;">
-                        <select id="facSelect" class="input-style" required></select>
-                        <input type="text" id="aptReason" placeholder="Purpose of Meeting" required class="input-style">
-                        <input type="datetime-local" id="aptTime" required class="input-style">
-                        <button type="submit" class="btn-submit">Request Appointment</button>
-                    </form>
-                </div>
-                <div class="card" style="margin-top:20px; background: white; padding: 20px; border-radius: 12px;">
-                    <h3>Request History</h3>
-                    <div id="aptStatusList" style="margin-top: 15px;">Loading history...</div>
                 </div>
             </div>
 
@@ -116,101 +83,87 @@
                 <div class="faculty-grid" id="facultyStatusList"></div>
             </div>
 
-            <div id="gatepass" class="tab-content">
-                <div class="card" style="background: #fff; padding: 25px; max-width: 500px; border-radius: 12px;">
-                    <h3>New Gatepass Request</h3>
-                    <form onsubmit="requestGatepass(event)" style="margin-top:15px;">
-                        <label>Reason for Leave</label>
-                        <input type="text" id="gpReason" placeholder="e.g. Hospital, Personal Work" class="input-style" required>
-                        <label>Out Time</label>
-                        <input type="time" id="gpTime" class="input-style" required>
-                        <button class="btn-submit">Send to Warden/Class Incharge</button>
-                    </form>
+            <div id="resources" class="tab-content">
+                <div class="card" style="background: white; padding: 20px; border-radius: 12px;">
+                    <h3>Download Resources</h3>
+                    <table width="100%" style="margin-top: 15px; border-collapse: collapse;">
+                        <thead style="background: #f8f9fa;">
+                            <tr><th style="padding:12px; text-align:left;">Subject</th><th style="padding:12px; text-align:left;">Title</th><th style="padding:12px; text-align:center;">Action</th></tr>
+                        </thead>
+                        <tbody id="resourceBody"></tbody>
+                    </table>
                 </div>
             </div>
 
-            <div id="profile" class="tab-content">
-                <div id="profileIDCard" style="max-width: 400px; margin: auto;"></div>
+            <div id="appointments" class="tab-content">
+                <div class="card" style="background: white; padding: 20px; border-radius: 12px;">
+                    <h3>Book New Meeting</h3>
+                    <form onsubmit="handleAptRequest(event)" style="margin-top: 15px; display: grid; gap: 10px;">
+                        <select id="facSelect" class="input-style" style="padding: 10px; border-radius: 5px;"></select>
+                        <input type="text" id="aptReason" placeholder="Purpose" class="input-style" style="padding: 10px; border-radius: 5px;">
+                        <input type="datetime-local" id="aptTime" class="input-style" style="padding: 10px; border-radius: 5px;">
+                        <button type="submit" class="btn btn-primary" style="background: var(--chitkara-navy); color: white; padding: 10px; border: none; border-radius: 5px;">Request</button>
+                    </form>
+                </div>
             </div>
-
         </main>
     </div>
 
     <script>
-        // FIX: Defining API_BASE locally if app.js is still loading
         const API_BASE = "https://chitkara-faculty-app-2026.onrender.com";
         const user = JSON.parse(localStorage.getItem("user"));
 
-        function showTab(tabId, element) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            // Remove active class from all nav items
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            
-            // Show target tab
-            document.getElementById(tabId).classList.add('active');
-            // Highlight clicked nav item
-            element.classList.add('active');
-            
-            // Update Title
-            const titles = { 'academics': 'Academic Overview', 'appointments': 'Meeting Requests', 'availability': 'Faculty Live Status', 'gatepass': 'Gatepass Application', 'profile': 'My Student Profile' };
-            document.getElementById("tabTitle").innerText = titles[tabId] || "Student Portal";
-
-            // Trigger specific data loads
-            if(tabId === 'availability') loadFacultyLiveStatus();
-            if(tabId === 'appointments') { loadFacultyDropdown(); loadMyAppointments(); }
-            if(tabId === 'academics') loadERPData();
-            if(tabId === 'profile') typeof loadProfileCard === "function" ? loadProfileCard() : renderLocalProfile();
-        }
-
         window.onload = () => {
-            if(!user) {
-                window.location.href="login.html";
-                return;
-            }
+            if(!user) { window.location.href="login.html"; return; }
             document.getElementById("userNameDisplay").innerText = user.name;
-            document.getElementById("userDeptDisplay").innerText = `${user.department} | ${user.section || 'Sec A'} | Sem ${user.semester || '6'}`;
+            document.getElementById("userDeptDisplay").innerText = `${user.department} | Sem ${user.semester}`;
             document.getElementById("currentDate").innerText = new Date().toDateString();
-            loadERPData(); // Default Tab Data
+            loadERPData(); 
+            loadResources();
         };
 
-        // --- Logic Functions ---
-        async function loadFacultyLiveStatus() {
-            try {
-                const res = await fetch(`${API_BASE}/teachers`);
-                const teachers = await res.json();
-                document.getElementById("facultyStatusList").innerHTML = teachers.map(t => `
-                    <div class="fac-card">
-                        <div style="background: #f0f2f5; width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-user-tie" style="font-size:30px; color:var(--chitkara-navy);"></i>
-                        </div>
-                        <h4 style="margin-bottom: 5px;">${t.name}</h4>
-                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">${t.department}</p>
-                        <div style="background: ${t.status.includes('Available') ? '#e6fffa' : '#fff5f5'}; padding: 5px; border-radius: 5px;">
-                            <span class="status-indicator" style="background: ${t.status.includes('Available') ? '#27ae60' : '#d32f2f'}"></span> 
-                            <span style="color: ${t.status.includes('Available') ? '#27ae60' : '#d32f2f'}; font-weight: bold; font-size: 0.8rem;">${t.status}</span>
-                        </div>
-                        <p style="margin-top: 10px; font-size: 0.8rem; color: #888;"><i class="fas fa-map-marker-alt"></i> ${t.cabin || 'Cabin T-302'}</p>
-                    </div>
-                `).join('');
-            } catch(e) { console.error("Faculty status load failed"); }
+        function showTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
+            
+            if(tabId === 'availability') loadFacultyLiveStatus();
+            if(tabId === 'resources') loadResources();
         }
 
-        // Render Local Profile if app.js fails
-        function renderLocalProfile() {
-            document.getElementById("profileIDCard").innerHTML = `
-                <div class="card" style="text-align: center; padding: 30px; background: white; border-radius: 15px; border-top: 8px solid var(--chitkara-navy);">
-                    <i class="fas fa-user-circle" style="font-size: 80px; color: #ddd; margin-bottom: 15px;"></i>
-                    <h2>${user.name}</h2>
-                    <p style="color: var(--chitkara-red); font-weight: bold;">${user.rollNo || user.universityId}</p>
-                    <hr style="margin: 20px 0; opacity: 0.1;">
-                    <p style="text-align: left;"><strong>Email:</strong> ${user.email}</p>
-                    <p style="text-align: left;"><strong>Dept:</strong> ${user.department}</p>
-                    <p style="text-align: left;"><strong>Semester:</strong> ${user.semester}</p>
-                </div>
-            `;
+        async function loadERPData() {
+            try {
+                const res = await fetch(`${API_BASE}/students-by-class?semester=${user.semester}&section=${user.section}`);
+                const students = await res.json();
+                const me = students.find(s => s._id === user._id);
+                if(me) {
+                    const att = me.attendance || 0;
+                    document.getElementById("myAttVal").innerText = att + "%";
+                    document.getElementById("barVisual").style.width = att + "%";
+                    document.getElementById("st1Marks").innerText = me.marks?.st1 || 0;
+                    if(att < 75) document.getElementById("attWarning").style.display = "block";
+                }
+            } catch(e) { console.log("ERP Load Error"); }
         }
+
+        async function loadResources() {
+            try {
+                const res = await fetch(`${API_BASE}/get-resources`);
+                const data = await res.json();
+                document.getElementById("resourceBody").innerHTML = data.map(r => `
+                    <tr>
+                        <td style="padding:12px; border-bottom:1px solid #eee;">${r.subject}</td>
+                        <td style="padding:12px; border-bottom:1px solid #eee;">${r.title}</td>
+                        <td style="padding:12px; border-bottom:1px solid #eee; text-align:center;">
+                            <a href="${r.link}" target="_blank" style="color:var(--chitkara-red); font-weight:bold;">View</a>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch(e) { console.log("Resource Load Error"); }
+        }
+        
+        function logout() { localStorage.clear(); window.location.href="login.html"; }
     </script>
-    <script src="app.js"></script>
 </body>
 </html>

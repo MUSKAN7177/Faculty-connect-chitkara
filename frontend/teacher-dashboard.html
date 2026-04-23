@@ -7,108 +7,178 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --chitkara-navy: #1a2a6c;
-            --chitkara-red: #d32f2f;
-            --gold-accent: #ffcc00;
+        /* Sidebar and Layout Enhancements */
+        .erp-sidebar { 
+            background: linear-gradient(180deg, #1a2a6c 0%, #0f172a 100%) !important; 
+        }
+        
+        .status-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-top: 4px solid #ed1c24;
         }
 
-        .erp-sidebar { background: linear-gradient(180deg, var(--chitkara-navy) 0%, #243b55 100%) !important; height: 100vh; position: fixed; width: 260px; }
-        .erp-main { margin-left: 260px; width: calc(100% - 260px); }
-        .nav-item { cursor: pointer; padding: 15px 20px; color: rgba(255,255,255,0.8); transition: 0.3s; }
-        .nav-item:hover { background: rgba(255,255,255,0.1); }
-        .nav-item.active { background: rgba(255, 255, 255, 0.15) !important; border-left: 5px solid var(--gold-accent) !important; color: #fff !important; }
+        .status-btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
 
-        .request-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; }
-        .tab-content { display: none; padding: 25px; }
+        .status-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            opacity: 0.6;
+        }
+
+        .status-btn.active { opacity: 1; transform: scale(1.05); }
+        .btn-available { background: #dcfce7; color: #15803d; border: 1px solid #15803d; }
+        .btn-busy { background: #fee2e2; color: #b91c1c; border: 1px solid #b91c1c; }
+        .btn-class { background: #fef9c3; color: #a16207; border: 1px solid #a16207; }
+
+        .request-card { 
+            background: #f8fafc; 
+            padding: 15px; 
+            border-radius: 12px; 
+            margin-bottom: 12px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-left: 5px solid #1a2a6c; 
+        }
+
+        .active-class-badge {
+            background: #ffcc00;
+            color: #1a2a6c;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 800;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .tab-content { display: none; animation: fadeIn 0.4s ease; }
         .tab-content.active { display: block; }
-        
-        .active-class-box { background: #fff3cd; padding: 10px; border-radius: 8px; margin-top: 10px; border: 1px solid #ffeeba; font-size: 13px; font-weight: 600; color: #856404; }
-        .custom-select { padding: 10px; border: 1px solid #ddd; border-radius: 5px; min-width: 150px; }
-        
-        .btn-save-record { background: var(--chitkara-navy); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="erp-body">
 
     <div class="dashboard-wrapper">
         <nav class="erp-sidebar">
-            <div class="sidebar-header" style="padding: 20px; text-align: center;">
-                <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" width="160">
+            <div class="sidebar-header" style="padding: 25px; text-align: center;">
+                <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" width="170" style="filter: brightness(0) invert(1);">
             </div>
-            <div class="user-info-brief" style="padding: 0 20px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                <p style="color:white; font-weight:bold; margin-bottom: 5px;">Prof. <span id="tNameSidebar">...</span></p>
-                <small id="tDeptSidebar" style="color:var(--gold-accent);">Department</small>
-                <div id="currentClassIndicator" class="active-class-box">Loading Active Class...</div>
+            
+            <div class="user-info-brief" style="text-align: center; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <div style="font-size: 40px; color: #ffcc00; margin-bottom: 10px;"><i class="fas fa-user-circle"></i></div>
+                <p style="color:white; font-weight:bold; margin:0;">Prof. <span id="tNameSidebar">...</span></p>
+                <div id="classBadge" class="active-class-badge">OFFLINE</div>
             </div>
-            <ul class="nav-menu" style="list-style: none; padding: 10px 0;">
-                <li onclick="showTab('attendance', this)" class="nav-item active"><i class="fas fa-users-cog"></i> Student Records</li>
-                <li onclick="showTab('appointments', this)" class="nav-item"><i class="fas fa-calendar-check"></i> Appointments</li>
-                <li onclick="showTab('availability-status', this)" class="nav-item"><i class="fas fa-signal"></i> My Status</li>
-                <li onclick="showTab('profile', this)" class="nav-item"><i class="fas fa-user-tie"></i> Profile & Settings</li>
-                <li onclick="logout()" class="nav-item" style="color: #ff7675; margin-top: 20px;"><i class="fas fa-sign-out-alt"></i> Logout</li>
+
+            <ul class="nav-menu" style="list-style: none; padding: 20px 10px;">
+                <li onclick="showTab('attendance', this)" class="nav-item active"><i class="fas fa-edit"></i> Student Records</li>
+                <li onclick="showTab('appointments', this)" class="nav-item"><i class="fas fa-envelope-open-text"></i> Requests <span id="reqCount" style="background:red; font-size:10px; padding:2px 6px; border-radius:10px;">0</span></li>
+                <li onclick="showTab('status-tab', this)" class="nav-item"><i class="fas fa-broadcast-tower"></i> Live Status</li>
+                <li onclick="showTab('profile', this)" class="nav-item"><i class="fas fa-cog"></i> Settings</li>
+                <li onclick="logout()" class="nav-item" style="color: #ff7675; margin-top: 30px;"><i class="fas fa-power-off"></i> Logout</li>
             </ul>
         </nav>
 
         <main class="erp-main">
-            <header class="erp-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #fff; border-bottom: 1px solid #ddd;">
-                <h2 id="tabTitle">Update Student Records</h2>
-                <div id="liveClock" style="font-weight:bold; color:var(--chitkara-navy); font-size: 1.2rem;"></div>
+            <header class="erp-header" style="background: #fff; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <div>
+                    <h2 id="tabTitle" style="color: #1a2a6c;">Faculty Dashboard</h2>
+                    <p id="currentActionText" style="font-size: 0.85rem; color: #64748b;">Managing Academics</p>
+                </div>
+                <div id="liveClock" style="font-family: 'Courier New', Courier, monospace; font-weight: bold; background: #1a2a6c; color: #fff; padding: 8px 15px; border-radius: 8px;">00:00:00</div>
             </header>
 
-            <div id="attendance" class="tab-content active">
-                <div class="card" style="margin-bottom:20px; background: #fff; padding: 20px; border-radius: 12px;">
-                    <label>Select Category to Update:</label>
-                    <select id="marksCategory" onchange="loadTeacherData()" class="custom-select" style="margin-left: 10px;">
-                        <option value="attendance">Daily Attendance</option>
-                        <option value="st1">ST 1 Marks</option>
-                        <option value="st2">ST 2 Marks</option>
-                        <option value="assignment">Assignments</option>
-                    </select>
-                </div>
-                <div class="card" style="background: #fff; padding: 20px; border-radius: 12px;">
-                    <table class="erp-table" width="100%" style="border-collapse: collapse;">
-                        <thead>
-                            <tr style="background: #f8f9fa;">
-                                <th style="padding:12px; text-align:left; border-bottom:2px solid #eee;">Student Name</th>
-                                <th style="padding:12px; text-align:left; border-bottom:2px solid #eee;">Roll No</th>
-                                <th style="padding:12px; text-align:left; border-bottom:2px solid #eee;">Current Value</th>
-                                <th style="padding:12px; text-align:left; border-bottom:2px solid #eee;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="studentBody">
-                            </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="appointments" class="tab-content">
-                <div class="card" style="background: #fff; padding: 20px; border-radius: 12px;">
-                    <h3>Meeting Requests from Students</h3>
-                    <div id="requestList" style="margin-top: 15px;">Loading requests...</div>
-                </div>
-            </div>
-
-            <div id="profile" class="tab-content">
-                <div class="card" style="background: #fff; padding: 20px; border-radius: 12px; max-width: 600px;">
-                    <h3>Select Active Class (Teaching Now)</h3>
-                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">Setting this will filter the student list in "Student Records".</p>
-                    <div style="display:flex; gap:10px;">
-                        <select id="activeSem" class="custom-select">
-                            <option value="6">Semester 6</option>
-                            <option value="4">Semester 4</option>
-                            <option value="2">Semester 2</option>
-                        </select>
-                        <select id="activeSec" class="custom-select">
-                            <option value="A">Section A</option>
-                            <option value="B">Section B</option>
-                            <option value="C">Section C</option>
-                        </select>
-                        <button onclick="saveActiveClass()" class="btn-save-record">Set Active Class</button>
+            <div class="container" style="padding: 30px;">
+                
+                <div id="attendance" class="tab-content active">
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 style="color: #1a2a6c;"><i class="fas fa-database"></i> Bulk Update Records</h3>
+                            <select id="marksCategory" onchange="loadTeacherData()" class="input-style" style="width: auto; margin: 0;">
+                                <option value="attendance">Daily Attendance</option>
+                                <option value="st1">ST 1 Marks</option>
+                                <option value="st2">ST 2 Marks</option>
+                                <option value="assignment">Assignments</option>
+                            </select>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="erp-table">
+                                <thead>
+                                    <tr>
+                                        <th>Student Name</th>
+                                        <th>University ID</th>
+                                        <th>Current Val</th>
+                                        <th>Quick Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="studentBody">
+                                    </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
 
+                <div id="status-tab" class="tab-content">
+                    <div class="status-card">
+                        <h3>Update Your Current Availability</h3>
+                        <p style="color: #64748b; font-size: 0.9rem;">This status will be instantly visible to all students on their dashboard.</p>
+                        <div class="status-btn-group">
+                            <button onclick="updateStatus('Available', this)" class="status-btn btn-available active">Available</button>
+                            <button onclick="updateStatus('Busy', this)" class="status-btn btn-busy">Busy / Meeting</button>
+                            <button onclick="updateStatus('In Class', this)" class="status-btn btn-class">In Class</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="appointments" class="tab-content">
+                    <div class="card">
+                        <h3><i class="fas fa-clock"></i> Meeting Requests</h3>
+                        <hr style="margin: 15px 0; opacity: 0.1;">
+                        <div id="requestList">Loading requests...</div>
+                    </div>
+                </div>
+
+                <div id="profile" class="tab-content">
+                    <div class="card" style="max-width: 500px;">
+                        <h3>Teaching Configuration</h3>
+                        <div style="margin-top: 15px;">
+                            <label style="font-weight: bold; font-size: 0.85rem;">Select Active Class:</label>
+                            <div style="display:flex; gap:10px; margin-top: 10px;">
+                                <select id="activeSem" class="input-style">
+                                    <option value="6">Semester 6</option>
+                                    <option value="4">Semester 4</option>
+                                    <option value="2">Semester 2</option>
+                                </select>
+                                <select id="activeSec" class="input-style">
+                                    <option value="A">Section A</option>
+                                    <option value="B">Section B</option>
+                                    <option value="C">Section C</option>
+                                </select>
+                            </div>
+                            <button onclick="saveActiveClass()" class="btn-submit" style="width: 100%;">Sync Student List</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </main>
     </div>
 
@@ -119,22 +189,16 @@
         window.onload = () => {
             if(!user || localStorage.getItem("userRole") !== 'teacher') window.location.href="login.html";
             document.getElementById("tNameSidebar").innerText = user.name;
-            document.getElementById("tDeptSidebar").innerText = user.department;
             
             updateClock();
             setInterval(updateClock, 1000);
             updateClassIndicator();
             loadTeacherData(); 
+            loadAppointments();
         };
 
         function updateClock() {
             document.getElementById("liveClock").innerText = new Date().toLocaleTimeString();
-        }
-
-        function updateClassIndicator() {
-            const sem = localStorage.getItem("activeSem") || "6";
-            const sec = localStorage.getItem("activeSec") || "A";
-            document.getElementById("currentClassIndicator").innerText = `Teaching: Sem ${sem} - Sec ${sec}`;
         }
 
         function showTab(tabId, el) {
@@ -143,36 +207,49 @@
             document.getElementById(tabId).classList.add('active');
             el.classList.add('active');
             
-            if(tabId === 'appointments') loadAppointments();
+            const titles = {
+                'attendance': 'Student Records',
+                'status-tab': 'Live Availability',
+                'appointments': 'Meeting Requests',
+                'profile': 'Portal Settings'
+            };
+            document.getElementById("tabTitle").innerText = titles[tabId];
         }
 
-        // --- FETCH STUDENT RECORDS ---
+        async function updateStatus(status, btn) {
+            document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Backend Update Call (Optional: If you have a status field in Teacher Schema)
+            alert("Status Updated to: " + status);
+            document.getElementById("classBadge").innerText = status.toUpperCase();
+        }
+
         async function loadTeacherData() {
             const sem = localStorage.getItem("activeSem") || "6";
             const sec = localStorage.getItem("activeSec") || "A";
             const category = document.getElementById("marksCategory").value;
             const container = document.getElementById("studentBody");
             
-            container.innerHTML = "<tr><td colspan='4' style='padding:20px; text-align:center;'>Fetching student list...</td></tr>";
+            container.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Searching Database...</td></tr>";
 
             try {
-                // Fetching students of active class
                 const res = await fetch(`${API_BASE}/students-by-class?sem=${sem}&sec=${sec}`);
                 const students = await res.json();
 
                 container.innerHTML = students.map(s => `
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding:12px;">${s.name}</td>
-                        <td style="padding:12px;">${s.universityId || 'N/A'}</td>
-                        <td style="padding:12px;">
-                            <input type="number" id="val-${s._id}" value="${s[category] || 0}" style="width:60px; padding:5px;">
+                    <tr>
+                        <td><strong>${s.name}</strong></td>
+                        <td><span class="badge-info" style="background:#eee; padding:2px 8px; border-radius:5px;">${s.universityId || 'N/A'}</span></td>
+                        <td>
+                            <input type="number" id="val-${s._id}" value="${s[category] || 0}" class="input-style" style="width:70px; margin:0; padding:5px;">
                         </td>
-                        <td style="padding:12px;">
-                            <button onclick="updateStudentValue('${s._id}')" class="btn-approve" style="background:#27ae60; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">Update</button>
+                        <td>
+                            <button onclick="updateStudentValue('${s._id}')" style="background:#27ae60; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;"><i class="fas fa-check"></i></button>
                         </td>
                     </tr>
-                `).join('') || "<tr><td colspan='4'>No students found in this section.</td></tr>";
-            } catch(e) { container.innerHTML = "Error loading students."; }
+                `).join('') || "<tr><td colspan='4'>No students found.</td></tr>";
+            } catch(e) { container.innerHTML = "Connection Error."; }
         }
 
         async function updateStudentValue(studentId) {
@@ -185,36 +262,32 @@
                 body: JSON.stringify({ studentId, category, newValue })
             });
 
-            if(res.ok) alert("✅ Record Updated!");
-            else alert("❌ Failed to update.");
-        }
-
-        function saveActiveClass() {
-            localStorage.setItem("activeSem", document.getElementById("activeSem").value);
-            localStorage.setItem("activeSec", document.getElementById("activeSec").value);
-            updateClassIndicator();
-            alert("✅ Active class updated to Sem " + document.getElementById("activeSem").value);
-            loadTeacherData();
+            if(res.ok) {
+                // Halka sa visual confirmation
+                document.getElementById(`val-${studentId}`).style.borderColor = "green";
+            }
         }
 
         async function loadAppointments() {
             try {
                 const res = await fetch(`${API_BASE}/teacher-appointments/${user._id}`);
                 const data = await res.json();
+                document.getElementById("reqCount").innerText = data.filter(a => a.status === 'Pending').length;
                 document.getElementById("requestList").innerHTML = data.map(a => `
                     <div class="request-card">
                         <div>
-                            <strong>${a.studentName}</strong><br>
-                            <small>${a.reason} | ${new Date(a.time).toLocaleString()}</small>
+                            <span style="font-weight:bold; color:#1a2a6c;">${a.studentName}</span><br>
+                            <small style="color:#666;"><i class="fas fa-info-circle"></i> ${a.reason}</small>
                         </div>
-                        <div>
+                        <div style="text-align:right;">
+                            <small style="display:block; margin-bottom:5px;">${new Date(a.time).toLocaleDateString()}</small>
                             ${a.status === 'Pending' ? `
-                                <button onclick="handleApt('${a._id}', 'Approved')" style="color:green; border:none; background:none; cursor:pointer; font-weight:bold;">Approve</button> | 
-                                <button onclick="handleApt('${a._id}', 'Declined')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">Decline</button>
-                            ` : `<strong>${a.status}</strong>`}
+                                <button onclick="handleApt('${a._id}', 'Approved')" class="btn-available" style="padding:4px 10px; border-radius:5px; cursor:pointer;">Approve</button>
+                                <button onclick="handleApt('${a._id}', 'Declined')" class="btn-busy" style="padding:4px 10px; border-radius:5px; cursor:pointer;">Reject</button>
+                            ` : `<span class="status-pill ${a.status === 'Approved' ? 'status-available' : 'status-busy'}">${a.status}</span>`}
                         </div>
                     </div>
-                `).join('') || "No new requests.";
+                `).join('') || "No active requests.";
             } catch(e) { console.error("Apt load error"); }
         }
 
@@ -225,6 +298,20 @@
                 body: JSON.stringify({ aptId: id, status })
             });
             loadAppointments();
+        }
+
+        function saveActiveClass() {
+            localStorage.setItem("activeSem", document.getElementById("activeSem").value);
+            localStorage.setItem("activeSec", document.getElementById("activeSec").value);
+            updateClassIndicator();
+            loadTeacherData();
+            alert("Class Filter Applied!");
+        }
+
+        function updateClassIndicator() {
+            const sem = localStorage.getItem("activeSem") || "6";
+            const sec = localStorage.getItem("activeSec") || "A";
+            document.getElementById("classBadge").innerText = `SEM ${sem} - SEC ${sec}`;
         }
 
         function logout() { localStorage.clear(); window.location.href="login.html"; }

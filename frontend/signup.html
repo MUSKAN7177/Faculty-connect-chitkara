@@ -3,29 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register | Faculty Connect</title>
+    <title>Register | Faculty Connect ERP</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        .auth-page {
+            background: linear-gradient(135deg, #f4f7f6 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .signup-card {
+            background: white;
+            padding: 35px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            border-top: 5px solid #ed1c24;
+        }
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .input-group {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px 15px 12px 42px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            transition: 0.3s;
+            box-sizing: border-box;
+            background-color: #fff;
+        }
+        .input-group input:focus, .input-group select:focus {
+            border-color: #1a2a6c;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(26, 42, 108, 0.1);
+        }
+        .btn-auth {
+            width: 100%;
+            padding: 14px;
+            background: #ed1c24;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+            font-size: 1rem;
+        }
+        .btn-auth:hover {
+            background: #1a2a6c;
+            transform: translateY(-2px);
+        }
+        .badge-info {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        @media (max-width: 480px) {
+            .input-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body class="auth-page">
     <div class="signup-card animate-fade-in">
-        <div class="auth-header">
-            <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" alt="Chitkara Logo" class="auth-logo">
-            <h2>Create Account</h2>
-            <p id="signupRoleText">Registering as Student</p>
+        <div class="auth-header" style="text-align: center; margin-bottom: 25px;">
+            <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" alt="Chitkara Logo" style="width: 160px; margin-bottom: 15px;">
+            <h2 style="color: #1a2a6c; margin: 0;">Create Account</h2>
+            <div id="signupRoleBadge" class="badge-info">Registering as Student</div>
         </div>
 
         <form onsubmit="handleSignup(event)" class="auth-form">
-            <div class="input-grid">
-                <div class="input-group">
-                    <i class="fas fa-user"></i>
-                    <input type="text" id="name" placeholder="Full Name" required>
-                </div>
-                
-                <div class="input-group">
-                    <i class="fas fa-id-card"></i>
-                    <input type="text" id="idField" placeholder="Roll No / University ID" required>
-                </div>
+            <div class="input-group">
+                <i class="fas fa-user"></i>
+                <input type="text" id="name" placeholder="Full Name" required>
+            </div>
+
+            <div class="input-group">
+                <i class="fas fa-id-card"></i>
+                <input type="text" id="idField" placeholder="Roll No / University ID" required>
             </div>
 
             <div class="input-group">
@@ -46,11 +125,12 @@
                         <option value="BCA">BCA</option>
                         <option value="CSE">CSE</option>
                         <option value="MCA">MCA</option>
+                        <option value="Applied Sciences">Applied Sciences</option>
                     </select>
                 </div>
 
                 <div class="input-group" id="sectionGroup">
-                    <i class="fas fa- chalkboard"></i>
+                    <i class="fas fa-chalkboard"></i>
                     <select id="section" required>
                         <option value="" disabled selected>Section</option>
                         <option value="A">Sec A</option>
@@ -71,16 +151,18 @@
                     <option value="4">Semester 4</option>
                     <option value="5">Semester 5</option>
                     <option value="6">Semester 6</option>
+                    <option value="7">Semester 7</option>
+                    <option value="8">Semester 8</option>
                 </select>
             </div>
 
-            <button type="submit" class="btn-auth">REGISTER NOW <i class="fas fa-user-plus"></i></button>
+            <button type="submit" class="btn-auth">REGISTER NOW <i class="fas fa-user-plus" style="margin-left: 8px;"></i></button>
         </form>
 
-        <div class="auth-footer">
-            <p>Already have an account? <a href="login.html">Login here</a></p>
-            <button onclick="location.href='role.html'" class="btn-text">
-                <i class="fas fa-chevron-left"></i> Back to Role Selection
+        <div class="auth-footer" style="text-align: center; margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">
+            <p style="font-size: 0.9rem; color: #64748b;">Already have an account? <a href="login.html" style="color: #ed1c24; text-decoration: none; font-weight: 600;">Login here</a></p>
+            <button onclick="location.href='role.html'" style="background: none; border: none; color: #1a2a6c; font-size: 0.85rem; cursor: pointer; margin-top: 10px; font-weight: 600;">
+                <i class="fas fa-chevron-left" style="font-size: 0.7rem;"></i> Back to Role Selection
             </button>
         </div>
     </div>
@@ -88,22 +170,26 @@
     <script>
         window.onload = function() {
             const role = localStorage.getItem("userRole") || "student";
-            const text = document.getElementById("signupRoleText");
+            const badge = document.getElementById("signupRoleBadge");
             const idField = document.getElementById("idField");
             const semGroup = document.getElementById("semGroup");
             const secGroup = document.getElementById("sectionGroup");
 
             if(role === 'teacher') {
-                text.innerText = "Registering as Faculty Member";
-                idField.placeholder = "University Teacher ID";
-                // Faculty ke liye semester aur section hide kar rahe hain logic ko clean rakhne ke liye
+                badge.innerText = "FACULTY REGISTRATION";
+                badge.style.color = "#1a2a6c";
+                idField.placeholder = "University Teacher ID (Emp ID)";
+                
+                // Hide student-specific fields
                 semGroup.style.display = "none";
                 secGroup.style.display = "none";
-                // Requirement hatana zaruri hai warna form submit nahi hoga hide hone pe
+                
+                // Remove required attribute so form can submit
                 document.getElementById("semester").required = false;
                 document.getElementById("section").required = false;
             } else {
-                text.innerText = "Registering as Student";
+                badge.innerText = "STUDENT REGISTRATION";
+                badge.style.color = "#ed1c24";
                 idField.placeholder = "University Roll Number";
             }
         }

@@ -6,13 +6,76 @@
     <title>Login | Faculty Connect</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Specific enhancements for the Login Card */
+        .auth-page {
+            background: linear-gradient(135deg, #f4f7f6 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            border-top: 5px solid #ed1c24;
+        }
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            transition: 0.3s;
+            box-sizing: border-box;
+        }
+        .input-group input:focus {
+            border-color: #1a2a6c;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(26, 42, 108, 0.1);
+        }
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #94a3b8;
+        }
+        .badge-role {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: white;
+            margin-top: 5px;
+            letter-spacing: 1px;
+        }
+    </style>
 </head>
 <body class="auth-page">
     <div class="login-card animate-fade-in">
-        <div class="auth-header">
-            <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" alt="Chitkara Logo" class="auth-logo">
-            <h2 id="loginTitle">Student Login</h2>
-            <p id="roleBadge" class="badge-role">STUDENT</p>
+        <div class="auth-header" style="text-align: center; margin-bottom: 30px;">
+            <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/logo.png" alt="Chitkara Logo" style="width: 180px; margin-bottom: 15px;">
+            <h2 id="loginTitle" style="color: #1a2a6c; margin: 0;">Login</h2>
+            <span id="roleBadge" class="badge-role">ROLE</span>
         </div>
 
         <form onsubmit="handleLogin(event)" class="auth-form">
@@ -24,34 +87,57 @@
             <div class="input-group">
                 <i class="fas fa-lock"></i>
                 <input type="password" id="loginPassword" placeholder="Password" required>
+                <i class="fas fa-eye toggle-password" onclick="togglePass()"></i>
             </div>
 
-            <button type="submit" class="btn-auth">SIGN IN <i class="fas fa-arrow-right"></i></button>
+            <button type="submit" class="btn-auth" style="width: 100%; padding: 12px; background: #ed1c24; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s;">
+                SIGN IN <i class="fas fa-sign-in-alt" style="margin-left: 8px;"></i>
+            </button>
         </form>
 
-        <div class="auth-footer">
-            <p>New user? <a href="signup.html">Register here</a></p>
-            <button onclick="location.href='role.html'" class="btn-text">
-                <i class="fas fa-chevron-left"></i> Change Role
+        <div class="auth-footer" style="text-align: center; margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">
+            <p style="font-size: 0.9rem; color: #64748b;">New user? <a href="signup.html" style="color: #ed1c24; text-decoration: none; font-weight: 600;">Register here</a></p>
+            <button onclick="location.href='role.html'" style="background: none; border: none; color: #1a2a6c; font-size: 0.85rem; cursor: pointer; margin-top: 10px; font-weight: 600;">
+                <i class="fas fa-chevron-left" style="font-size: 0.7rem;"></i> Change Role
             </button>
         </div>
     </div>
 
     <script>
+        // Password Toggle Logic
+        function togglePass() {
+            const passInput = document.getElementById("loginPassword");
+            const toggleIcon = document.querySelector(".toggle-password");
+            if (passInput.type === "password") {
+                passInput.type = "text";
+                toggleIcon.classList.replace("fa-eye", "fa-eye-slash");
+            } else {
+                passInput.type = "password";
+                toggleIcon.classList.replace("fa-eye-slash", "fa-eye");
+            }
+        }
+
         window.onload = function() {
-            // Hum 'userRole' use kar rahe hain jo role.html se set hota hai
-            const role = localStorage.getItem("userRole") || "student";
+            const role = localStorage.getItem("userRole");
+            
+            if(!role) {
+                window.location.href = 'role.html';
+                return;
+            }
+
             const badge = document.getElementById("roleBadge");
             const title = document.getElementById("loginTitle");
 
             badge.innerText = role.toUpperCase();
+            document.title = `${role.charAt(0).toUpperCase() + role.slice(1)} Login | Faculty Connect`;
             
+            // Dynamic UI adjustment based on role
             if(role === 'teacher') {
                 title.innerText = "Faculty Login";
-                badge.style.backgroundColor = "#2c3e50"; // Faculty ke liye dark blue/grey
+                badge.style.background = "#1a2a6c"; // Navy Blue for Teachers
             } else {
                 title.innerText = "Student Login";
-                badge.style.backgroundColor = "#d32f2f"; // Student ke liye Chitkara Red
+                badge.style.background = "#ed1c24"; // Red for Students
             }
         }
     </script>

@@ -3,127 +3,206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Faculty Connect</title>
+    <title>Student Dashboard | Faculty Connect ERP</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Pro Styling for Student Portal */
+        .attendance-card { background: white; padding: 20px; border-radius: 12px; border-left: 5px solid var(--chitkara-red); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .attendance-bar-bg { background: #eee; height: 10px; border-radius: 5px; margin: 10px 0; overflow: hidden; }
+        .attendance-bar-fill { height: 100%; background: var(--chitkara-red); transition: 0.8s ease-in-out; }
+        .alert-box { background: #fff2f2; color: #d63031; padding: 12px; border-radius: 8px; border: 1px solid #fab1a0; margin-top: 10px; font-weight: bold; display: none; animation: shake 0.5s; }
+        
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            100% { transform: translateX(0); }
+        }
+
+        .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .bg-available { background-color: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
+        .bg-busy { background-color: #e74c3c; box-shadow: 0 0 8px #e74c3c; }
+    </style>
 </head>
 
-<body class="dashboard-body">
-
-    <nav class="sidebar">
-        <div class="profile-section">
-            <img src="images/student-avatar.png" id="userImg" alt="Profile">
-            <h4 id="userName">User Name</h4>
-            <p id="userRole">Student</p>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <img src="https://www.chitkara.edu.in/wp-content/themes/chitkara/images/chitkara-university-logo.png" alt="Chitkara Logo">
+        </div>
+        <div class="profile-section" style="padding: 20px; text-align: center; color: white;">
+            <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" style="width: 65px; border: 2px solid white; border-radius: 50%;" alt="User">
+            <h4 id="userName" style="margin-top: 10px;">Student Name</h4>
+            <small id="userRoll" style="opacity: 0.8;">Roll No: 0000</small>
         </div>
         
         <div class="nav-links">
-            <button onclick="loadTeachers()" class="nav-btn active"><i class="fas fa-users"></i> Faculty Connect</button>
-            <button onclick="showSection('timetable')" class="nav-btn"><i class="fas fa-calendar-alt"></i> Timetable</button>
-            
-            <div id="studentMenu">
-                <button onclick="showSection('gatepass')" class="nav-btn"><i class="fas fa-door-open"></i> Gatepass</button>
-                <button onclick="showSection('medical')" class="nav-btn"><i class="fas fa-notes-medical"></i> Medical Leave</button>
-            </div>
-
-            <button onclick="loadRequests()" class="nav-btn"><i class="fas fa-bell"></i> Notifications</button>
-            <button onclick="handleLogout()" class="nav-btn logout"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            <button onclick="showTab('faculty-dir', this)" class="nav-btn active"><i class="fas fa-search"></i> Faculty Status</button>
+            <button onclick="showTab('my-academic', this)" class="nav-btn"><i class="fas fa-graduation-cap"></i> My Academic/ERP</button>
+            <button onclick="showTab('resources', this)" class="nav-btn"><i class="fas fa-file-download"></i> Notes & Timetable</button>
+            <button onclick="showTab('requests', this)" class="nav-btn"><i class="fas fa-paper-plane"></i> Meeting Requests</button>
+            <button onclick="handleLogout()" class="nav-btn logout" style="margin-top: 30px;"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
-    </nav>
+    </div>
 
     <main class="main-content">
-        <header class="top-bar">
-            <h2 id="sectionTitle">Faculty Directory</h2>
+        <header class="header-bar">
+            <h2 id="sectionTitle">Faculty Status</h2>
             <div class="search-box">
-                <input type="text" placeholder="Search Faculty..." id="searchBar">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchBar" onkeyup="searchFaculty()" placeholder="Find your teacher...">
             </div>
         </header>
 
-        <div id="data" class="grid-container">
-            </div>
+        <div id="faculty-dir" class="tab-content active">
+            <div id="data" class="erp-grid">
+                </div>
+        </div>
 
-        <div id="formModal" class="modal">
+        <div id="my-academic" class="tab-content">
+            <div class="erp-grid">
+                <div class="attendance-card">
+                    <h3>Overall Attendance</h3>
+                    <h2 id="attVal" style="font-size: 2.5rem; margin: 10px 0;">0%</h2>
+                    <div class="attendance-bar-bg"><div id="attFill" class="attendance-bar-fill" style="width: 0%;"></div></div>
+                    <div id="lowAttAlert" class="alert-box">
+                        <i class="fas fa-exclamation-triangle"></i> Action Required: Attendance below 75%!
+                    </div>
+                </div>
+
+                <div class="attendance-card" style="border-left-color: #1a2a6c;">
+                    <h3>Latest Sessional Marks</h3>
+                    <table style="width: 100%; margin-top: 15px;">
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 10px 0;">ST1 Marks</td>
+                            <td id="st1Val" style="font-weight: bold; text-align: right;">0</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0;">Assignment</td>
+                            <td id="assignVal" style="font-weight: bold; text-align: right;">0</td>
+                        </tr>
+                    </table>
+                </div>
             </div>
+        </div>
+
+        <div id="resources" class="tab-content">
+            <div class="card" style="background: white; padding: 20px;">
+                <h3><i class="fas fa-folder-open" style="color: #f1c40f;"></i> Subject Notes & Timetable</h3>
+                <table id="resourceTable" style="width: 100%; margin-top: 20px; border-collapse: collapse;">
+                    <thead style="background: #f8f9fa;">
+                        <tr>
+                            <th style="padding: 12px; text-align: left;">Subject</th>
+                            <th style="padding: 12px; text-align: left;">Resource Title</th>
+                            <th style="padding: 12px; text-align: center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resourceBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="requests" class="tab-content">
+            <div class="card" style="background: white; padding: 20px;">
+                <h3>Your Appointments</h3>
+                <div id="myApts" style="margin-top: 15px; color: #666;">Loading your requests...</div>
+            </div>
+        </div>
     </main>
 
     <script src="app.js"></script>
     <script>
         const user = JSON.parse(localStorage.getItem("user"));
-        const role = localStorage.getItem("userRole");
+        
+        window.onload = () => {
+            if(!user) window.location.href="login.html";
+            document.getElementById("userName").innerText = user.name;
+            document.getElementById("userRoll").innerText = "Roll No: " + (user.rollNo || "N/A");
+            
+            loadTeachers();
+            loadStudentERP();
+            loadResources();
+        };
 
-        document.getElementById("userName").innerText = user.name;
-        document.getElementById("userRole").innerText = role.toUpperCase();
-
-        if(role === "teacher") {
-            document.getElementById("studentMenu").style.display = "none";
+        function showTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            
+            document.querySelectorAll('.nav-btn').forEach(i => i.classList.remove('active'));
+            element.classList.add('active');
+            
+            document.getElementById("sectionTitle").innerText = element.innerText;
         }
 
-        // 1. Load Teachers with Clean Grid Cards
         async function loadTeachers() {
-            document.getElementById("sectionTitle").innerText = "Faculty Directory";
-            const res = await fetch("https://chitkara-faculty-app-2026.onrender.com/teachers");
-            const teachers = await res.json();
+            try {
+                const res = await fetch(`${API_BASE}/teachers`);
+                const teachers = await res.json();
+                let html = "";
+                teachers.forEach(t => {
+                    const statusClass = t.status === "Available" ? "bg-available" : "bg-busy";
+                    html += `
+                    <div class="feature-card">
+                        <div style="text-align: right;">
+                            <span class="status-dot ${statusClass}"></span>
+                            <small style="font-weight:bold; color:#555">${t.status}</small>
+                        </div>
+                        <i class="fas fa-user-circle" style="font-size:3rem; color:#1a2a6c; margin-bottom:10px;"></i>
+                        <h3>${t.name}</h3>
+                        <p style="color: #666; font-size: 0.9rem;">${t.department} | ${t.cabin || 'Cabin TBD'}</p>
+                        <button onclick="bookMeeting('${t._id}', '${t.name}')" class="btn btn-primary" style="width:100%; margin-top:15px;">Request Meeting</button>
+                    </div>`;
+                });
+                document.getElementById("data").innerHTML = html;
+            } catch(e) { document.getElementById("data").innerHTML = "<p>Connection Error</p>"; }
+        }
 
-            let html = "";
-            teachers.forEach(t => {
-                const isAvailable = t.status === "Available";
-                html += `
-                <div class="faculty-card">
-                    <div class="card-header">
-                        <img src="images/teacher.jpg" alt="Teacher">
-                        <span class="status-badge ${isAvailable ? 'online' : 'offline'}">
-                            ${isAvailable ? 'Available' : 'Busy'}
-                        </span>
-                    </div>
-                    <h3>${t.name}</h3>
-                    <p>${t.department}</p>
+        async function loadStudentERP() {
+            try {
+                const res = await fetch(`${API_BASE}/students-by-class?semester=${user.semester}&section=${user.section}`);
+                const students = await res.json();
+                const me = students.find(s => s._id === user._id);
+                if(me) {
+                    const att = me.attendance || 0;
+                    document.getElementById("attVal").innerText = att + "%";
+                    document.getElementById("attFill").style.width = att + "%";
+                    document.getElementById("st1Val").innerText = me.marks?.st1 || 0;
                     
-                    <div class="card-actions">
-                        <button onclick="viewTT('${t._id}')" class="btn-outline">View Timetable</button>
-                        ${role === "student" ? `<button onclick="sendReq('${t._id}', '${t.name}')" class="btn-primary">Book Meeting</button>` : ""}
-                    </div>
-                </div>
-                `;
-            });
-            document.getElementById("data").innerHTML = html;
+                    if(att < 75) {
+                        document.getElementById("lowAttAlert").style.display = "block";
+                        document.getElementById("attVal").style.color = "#ed1c24";
+                    }
+                }
+            } catch(e) { console.error("ERP load fail"); }
         }
 
-        // 2. Show Forms for Gatepass/Medical (Chalkpad Style)
-        function showSection(type) {
-            const container = document.getElementById("data");
-            if(type === 'gatepass') {
-                container.innerHTML = `
-                    <div class="form-card card">
-                        <h3>Request Gatepass</h3>
-                        <form onsubmit="requestGatepass(event)">
-                            <label>Reason for Leave</label>
-                            <input type="text" id="gpReason" placeholder="Personal / Hospital" required>
-                            <label>Out Time</label>
-                            <input type="time" id="gpTime" required>
-                            <button type="submit" class="btn-primary">Apply for Gatepass</button>
-                        </form>
-                    </div>
-                `;
-            } else if(type === 'medical') {
-                container.innerHTML = `
-                    <div class="form-card card">
-                        <h3>Apply for Medical Leave</h3>
-                        <form onsubmit="requestMedicalLeave(event)">
-                            <label>Nature of Illness</label>
-                            <input type="text" id="illness" placeholder="Fever / Injury" required>
-                            <label>Duration (Days)</label>
-                            <input type="number" id="duration" required>
-                            <label>Medical Certificate Link (Drive)</label>
-                            <input type="text" id="docLink" placeholder="Paste link here" required>
-                            <button type="submit" class="btn-primary">Submit Leave</button>
-                        </form>
-                    </div>
-                `;
-            }
+        async function loadResources() {
+            try {
+                const res = await fetch(`${API_BASE}/get-resources`);
+                const data = await res.json();
+                const tbody = document.getElementById("resourceBody");
+                if(data.length > 0) {
+                    tbody.innerHTML = data.map(r => `
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding:12px;">${r.subject}</td>
+                            <td style="padding:12px;">${r.title}</td>
+                            <td style="padding:12px; text-align:center;">
+                                <a href="${r.link}" target="_blank" class="btn-outline" style="text-decoration:none; padding:5px 10px; font-size:0.8rem;">View PDF</a>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px;'>No resources shared yet.</td></tr>";
+                }
+            } catch(e) { console.error("Resource error"); }
         }
 
-        // Initialize
-        loadTeachers();
+        function handleLogout() {
+            localStorage.clear();
+            window.location.href = "login.html";
+        }
     </script>
 </body>
 </html>
