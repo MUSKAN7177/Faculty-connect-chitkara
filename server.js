@@ -189,14 +189,18 @@ app.post("/signup", async (req, res) => {
 
 app.get("/teachers", async (req, res) => res.json(await Teacher.find()));
 
+// --- 🔍 Student Fetch Route (Fixed Version) ---
 app.get("/students-by-class", async (req, res) => {
-    const { semester, section } = req.query;
+    const { sem, sec } = req.query; // Frontend se 'sem' aur 'sec' uthayega
     try {
-        const students = await Student.find({ semester, section });
+        // Database mein 'semester' aur 'section' fields ke mutabik dhoondega
+        const students = await Student.find({ semester: sem, section: sec });
         res.json(students);
-    } catch (e) { res.status(500).json([]); }
+    } catch (e) { 
+        console.error("Fetch Error:", e);
+        res.status(500).json([]); 
+    }
 });
-
 // --- Home Route for Render Health Check ---
 app.get("/", (req, res) => res.send("Chitkara Faculty Connect API is Live!"));
 
